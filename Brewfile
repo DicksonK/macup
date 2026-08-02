@@ -1,0 +1,17 @@
+tap "homebrew/bundle"
+
+brew "git"
+brew "gh"
+brew "gum"
+brew "bat"
+brew "fzf"
+brew "ripgrep"
+brew "fd"
+brew "jq"
+brew "wget"
+brew "tmux"
+brew "neovim"
+
+cask "iterm2"
+cask "visual-studio-code"
+cask "rectangle"
