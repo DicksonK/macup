@@ -52,3 +52,11 @@ teardown() {
 
   grep -q "bad thing happened" "$TEST_HOME/stderr.log"
 }
+
+@test "log_warn prints the message to stderr" {
+  source "$ROOT_DIR/lib/common.sh"
+
+  log_warn "careful now" 2>"$TEST_HOME/stderr.log"
+
+  grep -q "careful now" "$TEST_HOME/stderr.log"
+}
