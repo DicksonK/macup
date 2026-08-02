@@ -1,0 +1,9 @@
+[user]
+	name =
+	email =
+[init]
+	defaultBranch = main
+[pull]
+	rebase = false
+[core]
+	editor = vim
