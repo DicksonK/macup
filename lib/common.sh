@@ -22,3 +22,24 @@ log_warn() {
 log_error() {
   printf '\033[1;31m==> error:\033[0m %s\n' "$1" >&2
 }
+
+load_config() {
+  local config_dir="$HOME/.config/mac-up"
+  local config_file="$config_dir/config"
+  local example_file="$ROOT_DIR/mac-up.conf.example"
+
+  DOTFILES_REPO="${DOTFILES_REPO:-}"
+  EXTRA_BREWFILE="${EXTRA_BREWFILE:-}"
+
+  if [ ! -f "$config_file" ]; then
+    if ui_confirm "No config found. Create default config at $config_file?"; then
+      mkdir -p "$config_dir"
+      cp "$example_file" "$config_file"
+    else
+      return 0
+    fi
+  fi
+
+  # shellcheck disable=SC1090
+  source "$config_file"
+}

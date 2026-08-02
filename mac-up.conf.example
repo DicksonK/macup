@@ -1,0 +1,10 @@
+# mac-up configuration
+# Uncomment and set values to customize a run. Leave blank/commented to
+# use the bundled defaults.
+
+# Git URL of an external dotfiles repo to use instead of the bundled
+# dotfiles/ directory (cloned into ~/.cache/mac-up/dotfiles-repo).
+#DOTFILES_REPO=
+
+# Path to an additional Brewfile to run after the bundled Brewfile.
+#EXTRA_BREWFILE=

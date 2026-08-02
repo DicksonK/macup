@@ -3,6 +3,8 @@
 setup() {
   load 'test_helper/load'
   mac_up_test_setup
+  source "$ROOT_DIR/lib/common.sh"
+  source "$ROOT_DIR/lib/menu.sh"
 }
 
 teardown() {
@@ -59,4 +61,36 @@ teardown() {
   log_warn "careful now" 2>"$TEST_HOME/stderr.log"
 
   grep -q "careful now" "$TEST_HOME/stderr.log"
+}
+
+@test "load_config sources an existing config file" {
+  mkdir -p "$TEST_HOME/.config/mac-up"
+  cat > "$TEST_HOME/.config/mac-up/config" <<'EOF'
+DOTFILES_REPO=git@github.com:example/dotfiles.git
+EXTRA_BREWFILE=/tmp/extra.Brewfile
+EOF
+
+  load_config
+
+  [ "$DOTFILES_REPO" = "git@github.com:example/dotfiles.git" ]
+  [ "$EXTRA_BREWFILE" = "/tmp/extra.Brewfile" ]
+}
+
+@test "load_config defaults to empty values when declined and no file exists" {
+  export GUM_CONFIRM_EXIT=1
+
+  load_config
+
+  [ "$DOTFILES_REPO" = "" ]
+  [ "$EXTRA_BREWFILE" = "" ]
+  [ ! -f "$TEST_HOME/.config/mac-up/config" ]
+}
+
+@test "load_config creates the config file from the example when confirmed" {
+  export GUM_CONFIRM_EXIT=0
+
+  load_config
+
+  [ -f "$TEST_HOME/.config/mac-up/config" ]
+  diff "$TEST_HOME/.config/mac-up/config" "$ROOT_DIR/mac-up.conf.example"
 }
