@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+echo "pbcopy" >> "${MAC_UP_CALL_LOG:-/dev/null}"
+cat > /dev/null
+exit 0

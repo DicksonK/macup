@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+echo "ssh-keygen $*" >> "${MAC_UP_CALL_LOG:-/dev/null}"
+prev=""
+keypath=""
+for arg in "$@"; do
+  if [ "$prev" = "-f" ]; then keypath="$arg"; fi
+  prev="$arg"
+done
+if [ -n "$keypath" ]; then
+  echo "stub-private-key" > "$keypath"
+  echo "stub-public-key" > "$keypath.pub"
+fi
+exit 0

@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+echo "gum $*" >> "${MAC_UP_CALL_LOG:-/dev/null}"
+case "$1" in
+  choose)
+    printf '%s\n' "${GUM_CHOOSE_RESULT:-}"
+    ;;
+  confirm)
+    exit "${GUM_CONFIRM_EXIT:-0}"
+    ;;
+  input)
+    if [ -n "${GUM_INPUT_RESULT:-}" ]; then
+      printf '%s\n' "$GUM_INPUT_RESULT"
+    else
+      for ((i = 2; i <= $#; i++)); do
+        if [ "${!i}" = "--value" ]; then
+          j=$((i + 1))
+          printf '%s\n' "${!j}"
+          exit 0
+        fi
+      done
+      printf '\n'
+    fi
+    ;;
+  spin)
+    shift
+    while [ $# -gt 0 ] && [ "$1" != "--" ]; do shift; done
+    shift
+    "$@"
+    ;;
+  style)
+    shift
+    echo "$*"
+    ;;
+esac

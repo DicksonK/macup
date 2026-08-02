@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+STORE="${DEFAULTS_STORE:-$HOME/.defaults-stub-store}"
+touch "$STORE"
+case "$1" in
+  read)
+    domain="$2"; key="$3"
+    line="$(grep -F "$domain|$key|" "$STORE" || true)"
+    if [ -z "$line" ]; then exit 1; fi
+    echo "${line##*|}"
+    exit 0
+    ;;
+  write)
+    domain="$2"; key="$3"; value="$5"
+    grep -vF "$domain|$key|" "$STORE" > "$STORE.tmp" 2>/dev/null || true
+    mv "$STORE.tmp" "$STORE"
+    echo "$domain|$key|$value" >> "$STORE"
+    echo "defaults write $domain $key $value" >> "${MAC_UP_CALL_LOG:-/dev/null}"
+    exit 0
+    ;;
+esac

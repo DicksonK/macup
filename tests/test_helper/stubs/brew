@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+echo "brew $*" >> "${MAC_UP_CALL_LOG:-/dev/null}"
+exit "${BREW_EXIT:-0}"
