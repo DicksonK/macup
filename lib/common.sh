@@ -12,18 +12,21 @@ resolve_script_dir() {
 }
 
 init_log_file() {
-  local log_dir="$HOME/.cache/mac-up/logs"
+  local log_dir="$HOME/.cache/mac-up/logs" candidate
   if mkdir -p "$log_dir" 2>/dev/null; then
-    MAC_UP_LOG_FILE="$log_dir/$(date +%Y-%m-%dT%H%M%S).log"
-  else
-    MAC_UP_LOG_FILE=""
+    candidate="$log_dir/$(date +%Y-%m-%dT%H%M%S).log"
+    if : 2>/dev/null >> "$candidate"; then
+      MAC_UP_LOG_FILE="$candidate"
+      return 0
+    fi
   fi
+  MAC_UP_LOG_FILE=""
 }
 
 _log_write() {
   local level="$1" msg="$2"
   if [ -n "${MAC_UP_LOG_FILE:-}" ]; then
-    printf '[%s] [%s] %s\n' "$(date +%Y-%m-%dT%H:%M:%S)" "$level" "$msg" >> "$MAC_UP_LOG_FILE" 2>/dev/null || true
+    printf '[%s] [%s] %s\n' "$(date +%Y-%m-%dT%H:%M:%S)" "$level" "$msg" 2>/dev/null >> "$MAC_UP_LOG_FILE" || true
   fi
 }
 

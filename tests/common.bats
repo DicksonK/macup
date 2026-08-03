@@ -172,4 +172,19 @@ EOF
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"should not abort"* ]]
+  [[ "$output" != *"Permission denied"* ]]
+}
+
+@test "init_log_file treats a pre-existing unwritable logs directory as a graceful-degradation case, not a crash" {
+  if [ "$(id -u)" = "0" ]; then
+    skip "chmod-based permission test doesn't work as root"
+  fi
+  mkdir -p "$TEST_HOME/.cache/mac-up/logs"
+  chmod 555 "$TEST_HOME/.cache/mac-up/logs"
+
+  init_log_file
+
+  chmod 755 "$TEST_HOME/.cache/mac-up/logs"
+
+  [ "$MAC_UP_LOG_FILE" = "" ]
 }

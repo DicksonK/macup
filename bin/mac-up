@@ -87,6 +87,7 @@ run_selected_modules() {
 }
 
 main() {
+  local invocation="$*"
   local run_all=false
   local cli_dotfiles_repo="" cli_brewfile=""
   local -a modules=()
@@ -122,6 +123,7 @@ main() {
   done
 
   init_log_file
+  log_info "mac-up run: mac-up $invocation"
 
   if [ "$run_all" = true ] || [ "${#modules[@]}" -gt 0 ]; then
     MAC_UP_NONINTERACTIVE=1

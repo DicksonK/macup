@@ -95,5 +95,6 @@ teardown() {
   log_file="$(ls "$HOME"/.cache/mac-up/logs/*.log)"
   [ -f "$log_file" ]
   grep -q "succeeded: homebrew" "$log_file"
+  grep -q "mac-up run: mac-up homebrew" "$log_file"
   [[ "$output" == *"Full log: $log_file"* ]]
 }
