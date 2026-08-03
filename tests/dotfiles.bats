@@ -181,3 +181,70 @@ teardown() {
   [ "$status" -eq 0 ]
   [ ! -f "$HOME/.gitconfig.local" ]
 }
+
+@test "run_dotfiles reports fresh links in dry-run mode without creating them" {
+  export MAC_UP_DRY_RUN=1
+
+  run run_dotfiles
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"[dry-run] would link $HOME/.zshrc -> $ROOT_DIR/dotfiles/zshrc"* ]]
+  [ ! -e "$HOME/.zshrc" ]
+  [ ! -L "$HOME/.zshrc" ]
+}
+
+@test "run_dotfiles reports the confirm-and-backup prompt in dry-run mode without prompting or mutating" {
+  echo "my custom zshrc" > "$HOME/.zshrc"
+  export MAC_UP_DRY_RUN=1
+
+  run run_dotfiles
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"[dry-run] would prompt to back up and replace $HOME/.zshrc"* ]]
+  [ "$(cat "$HOME/.zshrc")" = "my custom zshrc" ]
+  ! grep -q "gum confirm" "$MAC_UP_CALL_LOG"
+}
+
+@test "run_dotfiles reports the DOTFILES_REPO clone in dry-run mode without cloning" {
+  export DOTFILES_REPO="git@github.com:example/dotfiles.git"
+  export MAC_UP_DRY_RUN=1
+
+  run run_dotfiles
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"[dry-run] would clone dotfiles repo git@github.com:example/dotfiles.git"* ]]
+  [ ! -d "$HOME/.cache/mac-up/dotfiles-repo" ]
+}
+
+@test "run_dotfiles reports the DOTFILES_REPO pull in dry-run mode without pulling" {
+  export DOTFILES_REPO="git@github.com:example/dotfiles.git"
+  mkdir -p "$HOME/.cache/mac-up/dotfiles-repo/.git"
+  export MAC_UP_DRY_RUN=1
+
+  run run_dotfiles
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"[dry-run] would update the dotfiles repo cache"* ]]
+  ! grep -q "pull" "$MAC_UP_CALL_LOG"
+}
+
+@test "run_dotfiles reports the git identity prompt in dry-run mode without prompting or writing" {
+  export MAC_UP_DRY_RUN=1
+
+  run run_dotfiles
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"[dry-run] would prompt for and write git identity to $HOME/.gitconfig.local"* ]]
+  [ ! -f "$HOME/.gitconfig.local" ]
+}
+
+@test "run_dotfiles still reports already-configured git identity in dry-run mode" {
+  git config -f "$HOME/.gitconfig.local" user.name "Existing Name"
+  git config -f "$HOME/.gitconfig.local" user.email "existing@example.com"
+  export MAC_UP_DRY_RUN=1
+
+  run run_dotfiles
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Git identity already configured in $HOME/.gitconfig.local, skipping"* ]]
+}

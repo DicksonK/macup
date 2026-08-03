@@ -6,16 +6,24 @@ run_dotfiles() {
   if [ -n "${DOTFILES_REPO:-}" ]; then
     local cache_dir="$HOME/.cache/mac-up/dotfiles-repo"
     if [ -d "$cache_dir/.git" ]; then
-      log_info "Updating dotfiles repo cache"
-      if ! git -C "$cache_dir" pull --ff-only; then
-        log_warn "Failed to update dotfiles repo cache, using existing checkout"
+      if is_dry_run; then
+        dry_run_report "update the dotfiles repo cache at $cache_dir"
+      else
+        log_info "Updating dotfiles repo cache"
+        if ! git -C "$cache_dir" pull --ff-only; then
+          log_warn "Failed to update dotfiles repo cache, using existing checkout"
+        fi
       fi
     else
-      log_info "Cloning dotfiles repo: $DOTFILES_REPO"
-      mkdir -p "$(dirname "$cache_dir")"
-      if ! git clone "$DOTFILES_REPO" "$cache_dir"; then
-        log_error "Failed to clone dotfiles repo: $DOTFILES_REPO"
-        return 1
+      if is_dry_run; then
+        dry_run_report "clone dotfiles repo $DOTFILES_REPO into $cache_dir"
+      else
+        log_info "Cloning dotfiles repo: $DOTFILES_REPO"
+        mkdir -p "$(dirname "$cache_dir")"
+        if ! git clone "$DOTFILES_REPO" "$cache_dir"; then
+          log_error "Failed to clone dotfiles repo: $DOTFILES_REPO"
+          return 1
+        fi
       fi
     fi
     source_dir="$cache_dir"
@@ -29,6 +37,11 @@ run_dotfiles() {
     target="$HOME/.$(basename "$file")"
 
     if [ ! -e "$target" ] && [ ! -L "$target" ]; then
+      if is_dry_run; then
+        dry_run_report "link $target -> $file"
+        linked_count=$((linked_count + 1))
+        continue
+      fi
       if ! ln -s "$file" "$target"; then
         log_error "Failed to link $target -> $file"
         continue
@@ -40,6 +53,12 @@ run_dotfiles() {
 
     if [ -L "$target" ] && [ "$(readlink "$target")" = "$file" ]; then
       log_info "$target already up to date"
+      continue
+    fi
+
+    if is_dry_run; then
+      dry_run_report "prompt to back up and replace $target"
+      linked_count=$((linked_count + 1))
       continue
     fi
 
@@ -75,6 +94,8 @@ run_dotfiles() {
 
     if [ -n "$cur_name" ] && [ -n "$cur_email" ]; then
       log_info "Git identity already configured in $identity_file, skipping"
+    elif is_dry_run; then
+      dry_run_report "prompt for and write git identity to $identity_file"
     else
       [ -n "$cur_name" ] || cur_name="$(ui_input "Git user.name" "")"
       [ -n "$cur_email" ] || cur_email="$(ui_input "Git user.email" "")"
