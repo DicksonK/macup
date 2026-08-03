@@ -4,6 +4,14 @@ if [ "$1" = "auth" ] && [ "$2" = "status" ]; then
   exit "${GH_AUTH_STATUS_EXIT:-1}"
 fi
 if [ "$1" = "auth" ] && [ "$2" = "login" ]; then
+  cat >/dev/null
   exit "${GH_AUTH_LOGIN_EXIT:-0}"
+fi
+if [ "$1" = "api" ] && [ "$2" = "user/keys" ]; then
+  printf '%s\n' "${GH_REGISTERED_KEYS:-}"
+  exit 0
+fi
+if [ "$1" = "ssh-key" ] && [ "$2" = "add" ]; then
+  exit "${GH_SSH_KEY_ADD_EXIT:-0}"
 fi
 exit 0
