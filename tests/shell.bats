@@ -4,6 +4,7 @@ setup() {
   load 'test_helper/load'
   mac_up_test_setup
   source "$ROOT_DIR/lib/common.sh"
+  source "$ROOT_DIR/lib/menu.sh"
   source "$ROOT_DIR/lib/shell.sh"
 }
 

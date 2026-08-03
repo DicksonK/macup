@@ -46,6 +46,10 @@ Run from a local checkout:
 ./bin/mac-up --help
 ```
 
+The Homebrew formula pulls in `gum`, `git`, and `gh` automatically via
+`depends_on`. Running from a local checkout instead, install them yourself
+first: `brew install gum git gh`.
+
 ### Tests
 
 ```sh
