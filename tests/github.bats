@@ -136,6 +136,7 @@ teardown() {
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"[dry-run] would generate an SSH key at $HOME/.ssh/id_ed25519"* ]]
+  [[ "$output" == *"then check/register it with GitHub"* ]]
   [ ! -f "$HOME/.ssh/id_ed25519" ]
 }
 

@@ -5,7 +5,7 @@ run_github() {
 
   if [ ! -f "$key_path" ]; then
     if is_dry_run; then
-      dry_run_report "generate an SSH key at $key_path"
+      dry_run_report "generate an SSH key at $key_path, then check/register it with GitHub"
     else
       local email default_email
       default_email="$(git config -f "$HOME/.gitconfig.local" --get user.email 2>/dev/null || true)"
