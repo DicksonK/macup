@@ -1,0 +1,139 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Locate this script's real directory, resolving any symlinks (e.g. the
+# Homebrew Cellar symlink), before lib/common.sh exists to do it for us.
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do
+  DIR="$(cd -P "$(dirname "$SOURCE")" >/dev/null 2>&1 && pwd)"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ "$SOURCE" != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" >/dev/null 2>&1 && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+export ROOT_DIR
+
+# shellcheck source=lib/common.sh
+source "$ROOT_DIR/lib/common.sh"
+# shellcheck source=lib/menu.sh
+source "$ROOT_DIR/lib/menu.sh"
+# shellcheck source=lib/homebrew.sh
+source "$ROOT_DIR/lib/homebrew.sh"
+# shellcheck source=lib/shell.sh
+source "$ROOT_DIR/lib/shell.sh"
+# shellcheck source=lib/dotfiles.sh
+source "$ROOT_DIR/lib/dotfiles.sh"
+# shellcheck source=lib/macos_defaults.sh
+source "$ROOT_DIR/lib/macos_defaults.sh"
+# shellcheck source=lib/github.sh
+source "$ROOT_DIR/lib/github.sh"
+
+ALL_MODULES=(homebrew shell dotfiles macos-defaults github)
+
+usage() {
+  cat <<'EOF'
+Usage: mac-up [options] [module...]
+
+Options:
+  --all                     Run all modules, non-interactive
+  --dotfiles-repo=<url>     Override DOTFILES_REPO for this run
+  --brewfile=<path>         Override EXTRA_BREWFILE for this run
+  --help                    Show this help
+
+Modules: homebrew shell dotfiles macos-defaults github
+
+With no options or modules, launches an interactive checklist.
+EOF
+}
+
+module_function_name() {
+  case "$1" in
+    macos-defaults) echo "run_macos_defaults" ;;
+    *) echo "run_$1" ;;
+  esac
+}
+
+run_selected_modules() {
+  local -a modules=("$@")
+  local -a succeeded=() failed=()
+  local module fn
+
+  for module in "${modules[@]}"; do
+    fn="$(module_function_name "$module")"
+    ui_log_step "Running $module"
+    if "$fn"; then
+      succeeded+=("$module")
+    else
+      failed+=("$module")
+    fi
+  done
+
+  echo
+  log_info "Summary:"
+  if [ "${#succeeded[@]}" -gt 0 ]; then
+    log_info "  succeeded: ${succeeded[*]}"
+  fi
+  if [ "${#failed[@]}" -gt 0 ]; then
+    log_warn "  failed: ${failed[*]}"
+    return 1
+  fi
+  return 0
+}
+
+main() {
+  local run_all=false
+  local cli_dotfiles_repo="" cli_brewfile=""
+  local -a modules=()
+
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --help)
+        usage
+        exit 0
+        ;;
+      --all)
+        run_all=true
+        shift
+        ;;
+      --dotfiles-repo=*)
+        cli_dotfiles_repo="${1#--dotfiles-repo=}"
+        shift
+        ;;
+      --brewfile=*)
+        cli_brewfile="${1#--brewfile=}"
+        shift
+        ;;
+      homebrew|shell|dotfiles|macos-defaults|github)
+        modules+=("$1")
+        shift
+        ;;
+      *)
+        log_error "Unknown argument: $1"
+        usage
+        exit 1
+        ;;
+    esac
+  done
+
+  load_config
+
+  [ -n "$cli_dotfiles_repo" ] && DOTFILES_REPO="$cli_dotfiles_repo"
+  [ -n "$cli_brewfile" ] && EXTRA_BREWFILE="$cli_brewfile"
+
+  if [ "$run_all" = true ]; then
+    modules=("${ALL_MODULES[@]}")
+  fi
+
+  if [ "${#modules[@]}" -eq 0 ]; then
+    mapfile -t modules < <(ui_choose_modules)
+  fi
+
+  if [ "${#modules[@]}" -eq 0 ]; then
+    log_warn "No modules selected, nothing to do"
+    exit 0
+  fi
+
+  run_selected_modules "${modules[@]}"
+}
+
+main "$@"
