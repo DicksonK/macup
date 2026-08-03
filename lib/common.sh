@@ -23,7 +23,7 @@ init_log_file() {
 _log_write() {
   local level="$1" msg="$2"
   if [ -n "${MAC_UP_LOG_FILE:-}" ]; then
-    printf '[%s] [%s] %s\n' "$(date +%Y-%m-%dT%H:%M:%S)" "$level" "$msg" >> "$MAC_UP_LOG_FILE" 2>/dev/null
+    printf '[%s] [%s] %s\n' "$(date +%Y-%m-%dT%H:%M:%S)" "$level" "$msg" >> "$MAC_UP_LOG_FILE" 2>/dev/null || true
   fi
 }
 

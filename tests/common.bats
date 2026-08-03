@@ -155,3 +155,21 @@ EOF
 
   [ "$MAC_UP_LOG_FILE" = "" ]
 }
+
+@test "log_info does not abort the script when a post-init log write fails" {
+  if [ "$(id -u)" = "0" ]; then
+    skip "chmod-based permission test doesn't work as root"
+  fi
+  init_log_file
+  touch "$MAC_UP_LOG_FILE"
+  chmod 444 "$MAC_UP_LOG_FILE"
+  chmod 555 "$(dirname "$MAC_UP_LOG_FILE")"
+
+  run bash -c "set -euo pipefail; source '$ROOT_DIR/lib/common.sh'; MAC_UP_LOG_FILE='$MAC_UP_LOG_FILE'; log_info 'should not abort'"
+
+  chmod 755 "$(dirname "$MAC_UP_LOG_FILE")"
+  chmod 644 "$MAC_UP_LOG_FILE"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"should not abort"* ]]
+}
