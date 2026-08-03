@@ -41,6 +41,32 @@ teardown() {
   [ -L "$HOME/.zshrc" ]
 }
 
+@test "run_dotfiles skips overwrite when a backup file already exists" {
+  echo "my custom zshrc" > "$HOME/.zshrc"
+  echo "previous backup contents" > "$HOME/.zshrc.mac-up-backup"
+  export GUM_CONFIRM_EXIT=0
+
+  run run_dotfiles
+
+  [ "$status" -eq 0 ]
+  [ "$(cat "$HOME/.zshrc.mac-up-backup")" = "previous backup contents" ]
+  [ "$(cat "$HOME/.zshrc")" = "my custom zshrc" ]
+  [[ "$output" == *"backup $HOME/.zshrc.mac-up-backup already exists"* ]]
+}
+
+@test "run_dotfiles logs an error and continues when the backup mv fails" {
+  echo "my custom zshrc" > "$HOME/.zshrc"
+  export GUM_CONFIRM_EXIT=0
+  chmod 555 "$HOME"
+
+  run run_dotfiles
+
+  chmod 755 "$HOME"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Failed to back up $HOME/.zshrc"* ]]
+}
+
 @test "run_dotfiles skips an existing regular file when the user declines" {
   echo "my custom zshrc" > "$HOME/.zshrc"
   export GUM_CONFIRM_EXIT=1

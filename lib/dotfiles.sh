@@ -40,8 +40,18 @@ run_dotfiles() {
     fi
 
     if ui_confirm "$target already exists. Back it up and replace with symlink?"; then
-      mv "$target" "$target.mac-up-backup"
-      ln -s "$file" "$target"
+      if [ -e "$target.mac-up-backup" ] || [ -L "$target.mac-up-backup" ]; then
+        log_warn "Skipped $target: backup $target.mac-up-backup already exists"
+        continue
+      fi
+      if ! mv "$target" "$target.mac-up-backup"; then
+        log_error "Failed to back up $target, skipping"
+        continue
+      fi
+      if ! ln -s "$file" "$target"; then
+        log_error "Failed to link $target -> $file after backup"
+        continue
+      fi
       log_info "Backed up and linked $target -> $file"
     else
       log_warn "Skipped $target"
