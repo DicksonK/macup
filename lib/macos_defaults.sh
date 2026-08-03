@@ -15,6 +15,10 @@ _defaults_apply() {
     log_info "$domain $key already set to $value, skipping"
     return 0
   fi
+  if is_dry_run; then
+    dry_run_report "set $domain $key = $value"
+    return 0
+  fi
   if ! defaults write "$domain" "$key" "-$type" "$value"; then
     log_error "Failed to set $domain $key"
     return 1
@@ -24,7 +28,11 @@ _defaults_apply() {
 
 run_macos_defaults() {
   local failed=0
-  mkdir -p "$HOME/Screenshots"
+  if is_dry_run; then
+    dry_run_report "create $HOME/Screenshots"
+  else
+    mkdir -p "$HOME/Screenshots"
+  fi
 
   _defaults_apply com.apple.finder AppleShowAllExtensions bool true || failed=1
   _defaults_apply com.apple.finder AppleShowAllFiles bool true || failed=1
@@ -42,8 +50,12 @@ run_macos_defaults() {
   _defaults_apply NSGlobalDomain NSNavPanelExpandedStateForSaveMode bool true || failed=1
   _defaults_apply NSGlobalDomain PMPrintingExpandedStateForPrint bool true || failed=1
 
-  killall Finder >/dev/null 2>&1 || true
-  killall SystemUIServer >/dev/null 2>&1 || true
+  if is_dry_run; then
+    dry_run_report "restart Finder and SystemUIServer"
+  else
+    killall Finder >/dev/null 2>&1 || true
+    killall SystemUIServer >/dev/null 2>&1 || true
+  fi
 
   return "$failed"
 }

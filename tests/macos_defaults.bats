@@ -61,3 +61,43 @@ teardown() {
   grep -q "killall Finder" "$MAC_UP_CALL_LOG"
   grep -q "killall SystemUIServer" "$MAC_UP_CALL_LOG"
 }
+
+@test "run_macos_defaults reports settings in dry-run mode without writing them" {
+  export MAC_UP_DRY_RUN=1
+
+  run run_macos_defaults
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"[dry-run] would set com.apple.finder AppleShowAllExtensions = true"* ]]
+  ! grep -q "defaults write" "$MAC_UP_CALL_LOG"
+}
+
+@test "run_macos_defaults reports the Screenshots directory creation in dry-run mode without creating it" {
+  export MAC_UP_DRY_RUN=1
+
+  run run_macos_defaults
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"[dry-run] would create $HOME/Screenshots"* ]]
+  [ ! -d "$HOME/Screenshots" ]
+}
+
+@test "run_macos_defaults reports the Finder/SystemUIServer restart in dry-run mode without restarting" {
+  export MAC_UP_DRY_RUN=1
+
+  run run_macos_defaults
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"[dry-run] would restart Finder and SystemUIServer"* ]]
+  ! grep -q "killall" "$MAC_UP_CALL_LOG"
+}
+
+@test "run_macos_defaults still skips an already-applied setting in dry-run mode" {
+  echo "com.apple.finder|AppleShowAllExtensions|1" > "$DEFAULTS_STORE"
+  export MAC_UP_DRY_RUN=1
+
+  run run_macos_defaults
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"com.apple.finder AppleShowAllExtensions already set to true, skipping"* ]]
+}
