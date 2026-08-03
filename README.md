@@ -38,6 +38,18 @@ EXTRA_BREWFILE=             # e.g. /Users/you/Brewfile.personal — blank means 
 `--dotfiles-repo=<url>` and `--brewfile=<path>` override these for a
 single run without editing the file.
 
+`mac-up dotfiles` also manages a per-machine `~/.gitconfig.local` file
+(via `git config -f`, never symlinked) for `git config user.name`/
+`user.email`. It prompts once, the first time either is unset, and
+reuses whatever's already there on later runs. This is separate from —
+and never overwrites — the bundled `dotfiles/gitconfig`.
+
+`mac-up github` requires a GitHub Personal Access Token (classic) with
+the `repo`, `read:org`, `gist`, and `admin:public_key` scopes, created
+at https://github.com/settings/tokens. It's used for `gh auth login
+--with-token`, and the generated SSH key is then auto-uploaded to your
+account via `gh ssh-key add`.
+
 ## Development
 
 Run from a local checkout:
@@ -71,8 +83,10 @@ be verified by hand on a real or VM Mac before a release:
 - [ ] `defaults write` calls actually change Finder/keyboard/trackpad/
       screenshot behavior, and `killall Finder`/`SystemUIServer` applies
       them immediately.
-- [ ] `ssh-keygen` generates a real, usable key and `gh auth login`
-      completes.
+- [ ] `ssh-keygen` generates a real, usable key, `gh auth login
+      --with-token` completes with a PAT, and the key auto-uploaded
+      via `gh ssh-key add` actually shows up under
+      https://github.com/settings/keys.
 
 ## Cutting a release
 

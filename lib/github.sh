@@ -4,10 +4,8 @@ run_github() {
   local key_path="$HOME/.ssh/id_ed25519"
 
   if [ ! -f "$key_path" ]; then
-    local email default_email=""
-    if git config -f "$HOME/.gitconfig.local" --get user.email >/dev/null 2>&1; then
-      default_email="$(git config -f "$HOME/.gitconfig.local" --get user.email)"
-    fi
+    local email default_email
+    default_email="$(git config -f "$HOME/.gitconfig.local" --get user.email 2>/dev/null || true)"
     if [ -n "$default_email" ]; then
       email="$default_email"
     else
@@ -32,7 +30,7 @@ run_github() {
   fi
 
   if ! gh auth status >/dev/null 2>&1; then
-    log_info "No token found — create one at https://github.com/settings/tokens with the \"admin:public_key\" scope"
+    log_info "No token found — create a classic token at https://github.com/settings/tokens with the \"repo\", \"read:org\", \"gist\", and \"admin:public_key\" scopes"
     local token
     token="$(ui_input_secret "GitHub Personal Access Token")"
     if [ -z "$token" ]; then
@@ -48,9 +46,10 @@ run_github() {
   fi
 
   if [ -f "$key_path.pub" ]; then
-    local key_blob
+    local key_blob registered_keys
     key_blob="$(awk '{print $2}' "$key_path.pub")"
-    if gh api user/keys --jq '.[].key' 2>/dev/null | grep -qF "$key_blob"; then
+    registered_keys="$(gh api user/keys --jq '.[].key' 2>/dev/null || true)"
+    if [ -n "$key_blob" ] && printf '%s' "$registered_keys" | grep -qF "$key_blob"; then
       log_info "SSH key already registered with GitHub, skipping"
     else
       if ! gh ssh-key add "$key_path.pub" --title "mac-up ($(scutil --get ComputerName 2>/dev/null || hostname))"; then

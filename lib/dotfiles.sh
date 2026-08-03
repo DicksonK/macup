@@ -69,16 +69,21 @@ run_dotfiles() {
 
   if [ -z "${DOTFILES_REPO:-}" ]; then
     local identity_file="$HOME/.gitconfig.local"
-    if git config -f "$identity_file" --get user.name >/dev/null 2>&1 \
-      && git config -f "$identity_file" --get user.email >/dev/null 2>&1; then
+    local cur_name cur_email
+    cur_name="$(git config -f "$identity_file" --get user.name 2>/dev/null || true)"
+    cur_email="$(git config -f "$identity_file" --get user.email 2>/dev/null || true)"
+
+    if [ -n "$cur_name" ] && [ -n "$cur_email" ]; then
       log_info "Git identity already configured in $identity_file, skipping"
     else
-      local git_name git_email
-      git_name="$(ui_input "Git user.name" "")"
-      git_email="$(ui_input "Git user.email" "")"
-      git config -f "$identity_file" user.name "$git_name"
-      git config -f "$identity_file" user.email "$git_email"
-      log_info "Wrote git identity to $identity_file"
+      [ -n "$cur_name" ] || cur_name="$(ui_input "Git user.name" "")"
+      [ -n "$cur_email" ] || cur_email="$(ui_input "Git user.email" "")"
+      if git config -f "$identity_file" user.name "$cur_name" \
+        && git config -f "$identity_file" user.email "$cur_email"; then
+        log_info "Wrote git identity to $identity_file"
+      else
+        log_warn "Failed to write git identity to $identity_file"
+      fi
     fi
   fi
 

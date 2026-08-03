@@ -136,6 +136,43 @@ teardown() {
   [ "$(git config -f "$HOME/.gitconfig.local" --get user.name)" = "Existing Name" ]
 }
 
+@test "run_dotfiles preserves an already-set name and only prompts for the missing email" {
+  git config -f "$HOME/.gitconfig.local" user.name "Existing Name"
+  export GUM_INPUT_RESULT="new@example.com"
+
+  run run_dotfiles
+
+  [ "$status" -eq 0 ]
+  [ "$(git config -f "$HOME/.gitconfig.local" --get user.name)" = "Existing Name" ]
+  [ "$(git config -f "$HOME/.gitconfig.local" --get user.email)" = "new@example.com" ]
+}
+
+@test "run_dotfiles re-prompts on a second run when the identity was left empty" {
+  run run_dotfiles
+  [ "$status" -eq 0 ]
+
+  run run_dotfiles
+
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"Git identity already configured"* ]]
+}
+
+@test "run_dotfiles logs a warning instead of false success when writing git identity fails" {
+  if [ "$(id -u)" = "0" ]; then
+    skip "chmod-based permission test doesn't work as root"
+  fi
+  export GUM_INPUT_RESULT="Jane Doe"
+  chmod 555 "$HOME"
+
+  run run_dotfiles
+
+  chmod 755 "$HOME"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Failed to write git identity"* ]]
+  [[ "$output" != *"Wrote git identity"* ]]
+}
+
 @test "run_dotfiles does not touch git identity when DOTFILES_REPO is set" {
   export DOTFILES_REPO="git@github.com:example/dotfiles.git"
 

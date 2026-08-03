@@ -25,7 +25,9 @@ case "$1" in
     else
       key="$1"
       value="$2"
-      touch "$file"
+      if ! touch "$file" 2>/dev/null; then
+        exit 1
+      fi
       grep -v "^$key=" "$file" > "$file.tmp" 2>/dev/null || true
       mv "$file.tmp" "$file" 2>/dev/null || true
       echo "$key=$value" >> "$file"
