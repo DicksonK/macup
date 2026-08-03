@@ -32,6 +32,9 @@ load_config() {
   EXTRA_BREWFILE="${EXTRA_BREWFILE:-}"
 
   if [ ! -f "$config_file" ]; then
+    if [ "${MAC_UP_NONINTERACTIVE:-0}" = "1" ]; then
+      return 0
+    fi
     if ui_confirm "No config found. Create default config at $config_file?"; then
       mkdir -p "$config_dir"
       cp "$example_file" "$config_file"

@@ -94,3 +94,15 @@ EOF
   [ -f "$TEST_HOME/.config/mac-up/config" ]
   diff "$TEST_HOME/.config/mac-up/config" "$ROOT_DIR/mac-up.conf.example"
 }
+
+@test "load_config skips the create-config prompt when MAC_UP_NONINTERACTIVE is set" {
+  export MAC_UP_NONINTERACTIVE=1
+  export GUM_CONFIRM_EXIT=1
+
+  load_config
+
+  [ "$DOTFILES_REPO" = "" ]
+  [ "$EXTRA_BREWFILE" = "" ]
+  [ ! -f "$TEST_HOME/.config/mac-up/config" ]
+  ! grep -q "gum confirm" "$MAC_UP_CALL_LOG"
+}

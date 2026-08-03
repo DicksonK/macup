@@ -17,18 +17,34 @@ teardown() {
   run run_macos_defaults
 
   [ "$status" -eq 0 ]
-  grep -q "com.apple.finder|AppleShowAllExtensions|true" "$DEFAULTS_STORE"
+  grep -q "com.apple.finder|AppleShowAllExtensions|1" "$DEFAULTS_STORE"
   grep -q "defaults write com.apple.finder AppleShowAllExtensions true" "$MAC_UP_CALL_LOG"
 }
 
 @test "run_macos_defaults skips a setting that's already correctly applied" {
-  echo "com.apple.finder|AppleShowAllExtensions|true" > "$DEFAULTS_STORE"
+  echo "com.apple.finder|AppleShowAllExtensions|1" > "$DEFAULTS_STORE"
 
   run run_macos_defaults
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"com.apple.finder AppleShowAllExtensions already set to true, skipping"* ]]
   ! grep -q "defaults write com.apple.finder AppleShowAllExtensions" "$MAC_UP_CALL_LOG"
+}
+
+@test "run_macos_defaults recognizes an already-applied boolean setting on a second run" {
+  run_macos_defaults
+  run run_macos_defaults
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"com.apple.finder AppleShowAllExtensions already set to true, skipping"* ]]
+}
+
+@test "run_macos_defaults returns non-zero when a defaults write fails" {
+  export DEFAULTS_WRITE_EXIT=1
+
+  run run_macos_defaults
+
+  [ "$status" -eq 1 ]
 }
 
 @test "run_macos_defaults creates the Screenshots directory" {

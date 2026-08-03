@@ -115,6 +115,13 @@ main() {
     esac
   done
 
+  if [ "$run_all" = true ] || [ "${#modules[@]}" -gt 0 ]; then
+    MAC_UP_NONINTERACTIVE=1
+  else
+    MAC_UP_NONINTERACTIVE=0
+  fi
+  export MAC_UP_NONINTERACTIVE
+
   load_config
 
   [ -n "$cli_dotfiles_repo" ] && DOTFILES_REPO="$cli_dotfiles_repo"
@@ -125,12 +132,29 @@ main() {
   fi
 
   if [ "${#modules[@]}" -eq 0 ]; then
-    mapfile -t modules < <(ui_choose_modules)
+    modules=()
+    while IFS= read -r line; do
+      [ -n "$line" ] && modules+=("$line")
+    done < <(ui_choose_modules)
   fi
 
   if [ "${#modules[@]}" -eq 0 ]; then
     log_warn "No modules selected, nothing to do"
     exit 0
+  fi
+
+  if [ "${#modules[@]}" -gt 0 ]; then
+    local -a ordered=()
+    local m selected
+    for m in "${ALL_MODULES[@]}"; do
+      for selected in "${modules[@]}"; do
+        if [ "$m" = "$selected" ]; then
+          ordered+=("$m")
+          break
+        fi
+      done
+    done
+    modules=("${ordered[@]}")
   fi
 
   run_selected_modules "${modules[@]}"

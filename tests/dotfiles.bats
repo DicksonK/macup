@@ -55,6 +55,9 @@ teardown() {
 }
 
 @test "run_dotfiles logs an error and continues when the backup mv fails" {
+  if [ "$(id -u)" = "0" ]; then
+    skip "chmod-based permission test doesn't work as root"
+  fi
   echo "my custom zshrc" > "$HOME/.zshrc"
   export GUM_CONFIRM_EXIT=0
   chmod 555 "$HOME"
@@ -65,6 +68,20 @@ teardown() {
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"Failed to back up $HOME/.zshrc"* ]]
+}
+
+@test "run_dotfiles logs an error and continues when a fresh symlink fails" {
+  if [ "$(id -u)" = "0" ]; then
+    skip "chmod-based permission test doesn't work as root"
+  fi
+  chmod 555 "$HOME"
+
+  run run_dotfiles
+
+  chmod 755 "$HOME"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Failed to link $HOME/.zshrc"* ]]
 }
 
 @test "run_dotfiles skips an existing regular file when the user declines" {
@@ -86,4 +103,13 @@ teardown() {
 
   [ "$status" -eq 0 ]
   grep -q "clone git@github.com:example/dotfiles.git $HOME/.cache/mac-up/dotfiles-repo" "$MAC_UP_CALL_LOG"
+}
+
+@test "run_dotfiles warns when zero dotfiles were linked from a non-empty source_dir" {
+  export DOTFILES_REPO="git@github.com:example/dotfiles.git"
+
+  run run_dotfiles
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"No dotfiles found to link in"* ]]
 }

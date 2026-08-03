@@ -10,11 +10,21 @@ case "$1" in
     exit 0
     ;;
   write)
-    domain="$2"; key="$3"; value="$5"
+    domain="$2"; key="$3"; type="$4"; value="$5"
+    echo "defaults write $domain $key $value" >> "${MAC_UP_CALL_LOG:-/dev/null}"
+    if [ -n "${DEFAULTS_WRITE_EXIT:-}" ] && [ "$DEFAULTS_WRITE_EXIT" != "0" ]; then
+      exit "$DEFAULTS_WRITE_EXIT"
+    fi
+    stored="$value"
+    if [ "$type" = "-bool" ]; then
+      case "$value" in
+        true) stored=1 ;;
+        false) stored=0 ;;
+      esac
+    fi
     grep -vF "$domain|$key|" "$STORE" > "$STORE.tmp" 2>/dev/null || true
     mv "$STORE.tmp" "$STORE"
-    echo "$domain|$key|$value" >> "$STORE"
-    echo "defaults write $domain $key $value" >> "${MAC_UP_CALL_LOG:-/dev/null}"
+    echo "$domain|$key|$stored" >> "$STORE"
     exit 0
     ;;
 esac

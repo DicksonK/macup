@@ -70,3 +70,20 @@ teardown() {
   [[ "$output" == *"Running github"* ]]
   [[ "$output" == *"failed: homebrew"* ]]
 }
+
+@test "mac-up --all does not prompt for config creation" {
+  run "$MAC_UP_BIN" --all
+
+  [[ "$output" != *"No config found"* ]]
+  ! grep -q "gum confirm" "$MAC_UP_CALL_LOG"
+}
+
+@test "mac-up works under macOS's stock bash 3.2 (no mapfile)" {
+  export GUM_CHOOSE_RESULT="homebrew: Install Homebrew packages"
+
+  run /bin/bash "$MAC_UP_BIN"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"mapfile: command not found"* ]]
+  [[ "$output" == *"Running homebrew"* ]]
+}

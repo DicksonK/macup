@@ -23,14 +23,18 @@ run_dotfiles() {
     source_dir="$ROOT_DIR/dotfiles"
   fi
 
-  local file target
+  local file target linked_count=0
   for file in "$source_dir"/*; do
     [ -e "$file" ] || continue
     target="$HOME/.$(basename "$file")"
 
     if [ ! -e "$target" ] && [ ! -L "$target" ]; then
-      ln -s "$file" "$target"
+      if ! ln -s "$file" "$target"; then
+        log_error "Failed to link $target -> $file"
+        continue
+      fi
       log_info "Linked $target -> $file"
+      linked_count=$((linked_count + 1))
       continue
     fi
 
@@ -53,10 +57,15 @@ run_dotfiles() {
         continue
       fi
       log_info "Backed up and linked $target -> $file"
+      linked_count=$((linked_count + 1))
     else
       log_warn "Skipped $target"
     fi
   done
+
+  if [ "$linked_count" -eq 0 ]; then
+    log_warn "No dotfiles found to link in $source_dir"
+  fi
 
   return 0
 }
