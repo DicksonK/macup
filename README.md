@@ -50,6 +50,13 @@ at https://github.com/settings/tokens. It's used for `gh auth login
 --with-token`, and the generated SSH key is then auto-uploaded to your
 account via `gh ssh-key add`.
 
+Every run also writes its `log_info`/`log_warn`/`log_error` output to a
+plain-text log at `~/.cache/mac-up/logs/<timestamp>.log` — one file per
+run, path printed at the end of the summary, no rotation or config
+needed. Raw subcommand output (`brew`, `git`, `ssh-keygen`, etc.) and
+`gum`'s own interactive rendering aren't captured, only mac-up's own
+status lines.
+
 ## Development
 
 Run from a local checkout:
