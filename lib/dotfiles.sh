@@ -67,5 +67,20 @@ run_dotfiles() {
     log_warn "No dotfiles found to link in $source_dir"
   fi
 
+  if [ -z "${DOTFILES_REPO:-}" ]; then
+    local identity_file="$HOME/.gitconfig.local"
+    if git config -f "$identity_file" --get user.name >/dev/null 2>&1 \
+      && git config -f "$identity_file" --get user.email >/dev/null 2>&1; then
+      log_info "Git identity already configured in $identity_file, skipping"
+    else
+      local git_name git_email
+      git_name="$(ui_input "Git user.name" "")"
+      git_email="$(ui_input "Git user.email" "")"
+      git config -f "$identity_file" user.name "$git_name"
+      git config -f "$identity_file" user.email "$git_email"
+      log_info "Wrote git identity to $identity_file"
+    fi
+  fi
+
   return 0
 }

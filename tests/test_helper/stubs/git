@@ -6,6 +6,32 @@ case "$1" in
     mkdir -p "$target/.git"
     exit 0
     ;;
+  config)
+    shift
+    file=""
+    if [ "$1" = "-f" ]; then
+      shift
+      file="$1"
+      shift
+    fi
+    if [ "$1" = "--get" ]; then
+      key="$2"
+      line="$(grep "^$key=" "$file" 2>/dev/null | head -1 || true)"
+      if [ -z "$line" ]; then
+        exit 1
+      fi
+      echo "${line#*=}"
+      exit 0
+    else
+      key="$1"
+      value="$2"
+      touch "$file"
+      grep -v "^$key=" "$file" > "$file.tmp" 2>/dev/null || true
+      mv "$file.tmp" "$file" 2>/dev/null || true
+      echo "$key=$value" >> "$file"
+      exit 0
+    fi
+    ;;
   *)
     exit 0
     ;;

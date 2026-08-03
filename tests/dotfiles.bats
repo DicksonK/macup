@@ -113,3 +113,34 @@ teardown() {
   [ "$status" -eq 0 ]
   [[ "$output" == *"No dotfiles found to link in"* ]]
 }
+
+@test "run_dotfiles prompts for and writes git identity when using bundled dotfiles" {
+  export GUM_INPUT_RESULT="Jane Doe"
+
+  run run_dotfiles
+
+  [ "$status" -eq 0 ]
+  [ "$(git config -f "$HOME/.gitconfig.local" --get user.name)" = "Jane Doe" ]
+  [ "$(git config -f "$HOME/.gitconfig.local" --get user.email)" = "Jane Doe" ]
+  [[ "$output" == *"Wrote git identity to $HOME/.gitconfig.local"* ]]
+}
+
+@test "run_dotfiles skips the git identity prompt when already configured" {
+  git config -f "$HOME/.gitconfig.local" user.name "Existing Name"
+  git config -f "$HOME/.gitconfig.local" user.email "existing@example.com"
+
+  run run_dotfiles
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Git identity already configured in $HOME/.gitconfig.local, skipping"* ]]
+  [ "$(git config -f "$HOME/.gitconfig.local" --get user.name)" = "Existing Name" ]
+}
+
+@test "run_dotfiles does not touch git identity when DOTFILES_REPO is set" {
+  export DOTFILES_REPO="git@github.com:example/dotfiles.git"
+
+  run run_dotfiles
+
+  [ "$status" -eq 0 ]
+  [ ! -f "$HOME/.gitconfig.local" ]
+}
