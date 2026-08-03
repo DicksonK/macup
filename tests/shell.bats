@@ -32,3 +32,26 @@ teardown() {
   [ -d "$HOME/.oh-my-zsh/custom/themes/powerlevel10k" ]
   grep -q "clone --depth=1" "$MAC_UP_CALL_LOG"
 }
+
+@test "run_shell reports what it would do in dry-run mode without installing anything" {
+  export MAC_UP_DRY_RUN=1
+
+  run run_shell
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"[dry-run] would install Oh My Zsh via the official install script"* ]]
+  [[ "$output" == *"[dry-run] would clone Powerlevel10k into $HOME/.oh-my-zsh/custom/themes/powerlevel10k"* ]]
+  [ ! -d "$HOME/.oh-my-zsh" ]
+}
+
+@test "run_shell reports the Powerlevel10k clone in dry-run mode when Oh My Zsh already exists" {
+  mkdir -p "$HOME/.oh-my-zsh"
+  export MAC_UP_DRY_RUN=1
+
+  run run_shell
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Oh My Zsh already installed, skipping"* ]]
+  [[ "$output" == *"[dry-run] would clone Powerlevel10k"* ]]
+  [ ! -d "$HOME/.oh-my-zsh/custom/themes/powerlevel10k" ]
+}

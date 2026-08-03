@@ -63,3 +63,35 @@ EOF
   [ "$status" -eq 0 ]
   [[ "$output" == *"EXTRA_BREWFILE set but not found"* ]]
 }
+
+@test "run_homebrew reports it would install Homebrew in dry-run mode when brew is missing" {
+  export MAC_UP_DRY_RUN=1
+
+  run run_homebrew
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"[dry-run] would install Homebrew via the official install script"* ]]
+}
+
+@test "run_homebrew reports the default bundle in dry-run mode without calling brew" {
+  install_stub_brew
+  export MAC_UP_DRY_RUN=1
+
+  run run_homebrew
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"[dry-run] would run: brew bundle --file=$ROOT_DIR/Brewfile"* ]]
+  [ ! -s "$MAC_UP_CALL_LOG" ] || ! grep -q "brew" "$MAC_UP_CALL_LOG"
+}
+
+@test "run_homebrew reports the extra Brewfile bundle in dry-run mode without running it" {
+  install_stub_brew
+  echo "brew \"jq\"" > "$TEST_HOME/extra.Brewfile"
+  export EXTRA_BREWFILE="$TEST_HOME/extra.Brewfile"
+  export MAC_UP_DRY_RUN=1
+
+  run run_homebrew
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"[dry-run] would run: brew bundle --file=$TEST_HOME/extra.Brewfile"* ]]
+}
