@@ -36,6 +36,7 @@ Usage: mac-up [options] [module...]
 
 Options:
   --all                     Run all modules, non-interactive
+  --dry-run                 Preview actions without making changes
   --dotfiles-repo=<url>     Override DOTFILES_REPO for this run
   --brewfile=<path>         Override EXTRA_BREWFILE for this run
   --help                    Show this help
@@ -76,6 +77,9 @@ run_selected_modules() {
   if [ "${#failed[@]}" -gt 0 ]; then
     log_warn "  failed: ${failed[*]}"
   fi
+  if is_dry_run; then
+    log_info "(dry run — nothing was actually changed)"
+  fi
   if [ -n "${MAC_UP_LOG_FILE:-}" ]; then
     log_info "Full log: $MAC_UP_LOG_FILE"
   fi
@@ -89,6 +93,7 @@ run_selected_modules() {
 main() {
   local invocation="$*"
   local run_all=false
+  local dry_run=false
   local cli_dotfiles_repo="" cli_brewfile=""
   local -a modules=()
 
@@ -100,6 +105,10 @@ main() {
         ;;
       --all)
         run_all=true
+        shift
+        ;;
+      --dry-run)
+        dry_run=true
         shift
         ;;
       --dotfiles-repo=*)
@@ -131,6 +140,17 @@ main() {
     MAC_UP_NONINTERACTIVE=0
   fi
   export MAC_UP_NONINTERACTIVE
+
+  if [ "$dry_run" = true ]; then
+    MAC_UP_DRY_RUN=1
+  else
+    MAC_UP_DRY_RUN=0
+  fi
+  export MAC_UP_DRY_RUN
+
+  if is_dry_run; then
+    log_info "Dry run: no changes will be made"
+  fi
 
   load_config
 

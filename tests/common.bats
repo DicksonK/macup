@@ -188,3 +188,26 @@ EOF
 
   [ "$MAC_UP_LOG_FILE" = "" ]
 }
+
+@test "is_dry_run returns false when MAC_UP_DRY_RUN is unset" {
+  unset MAC_UP_DRY_RUN
+
+  run is_dry_run
+
+  [ "$status" -eq 1 ]
+}
+
+@test "is_dry_run returns true when MAC_UP_DRY_RUN=1" {
+  export MAC_UP_DRY_RUN=1
+
+  run is_dry_run
+
+  [ "$status" -eq 0 ]
+}
+
+@test "dry_run_report logs a [dry-run]-prefixed message via log_info" {
+  run dry_run_report "do the thing"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"[dry-run] would do the thing"* ]]
+}

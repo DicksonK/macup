@@ -45,6 +45,14 @@ log_error() {
   _log_write ERROR "$1"
 }
 
+is_dry_run() {
+  [ "${MAC_UP_DRY_RUN:-0}" = "1" ]
+}
+
+dry_run_report() {
+  log_info "[dry-run] would $1"
+}
+
 load_config() {
   local config_dir="$HOME/.config/mac-up"
   local config_file="$config_dir/config"

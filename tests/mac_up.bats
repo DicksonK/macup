@@ -98,3 +98,11 @@ teardown() {
   grep -q "mac-up run: mac-up homebrew" "$log_file"
   [[ "$output" == *"Full log: $log_file"* ]]
 }
+
+@test "mac-up --dry-run prints a startup banner and a summary note" {
+  run "$MAC_UP_BIN" --dry-run homebrew
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Dry run: no changes will be made"* ]]
+  [[ "$output" == *"(dry run — nothing was actually changed)"* ]]
+}
