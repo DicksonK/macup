@@ -45,6 +45,19 @@ dotfiles: Symlink dotfiles into \$HOME"
   [ "$output" = "typed@example.com" ]
 }
 
+@test "ui_input_secret returns GUM_INPUT_RESULT when set" {
+  export GUM_INPUT_RESULT="super-secret-token"
+  run ui_input_secret "GitHub Personal Access Token"
+  [ "$status" -eq 0 ]
+  [ "$output" = "super-secret-token" ]
+}
+
+@test "ui_input_secret passes --password to gum input" {
+  run ui_input_secret "GitHub Personal Access Token"
+  [ "$status" -eq 0 ]
+  grep -q -- "--password" "$MAC_UP_CALL_LOG"
+}
+
 @test "ui_spin runs the wrapped command and forwards its exit status" {
   run ui_spin "Doing thing" -- bash -c 'exit 3'
   [ "$status" -eq 3 ]

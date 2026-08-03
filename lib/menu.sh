@@ -20,6 +20,11 @@ ui_input() {
   gum input --placeholder "$prompt" --value "$default"
 }
 
+ui_input_secret() {
+  local prompt="$1"
+  gum input --placeholder "$prompt" --password
+}
+
 ui_spin() {
   local title="$1"
   shift
