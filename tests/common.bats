@@ -106,3 +106,52 @@ EOF
   [ ! -f "$TEST_HOME/.config/mac-up/config" ]
   ! grep -q "gum confirm" "$MAC_UP_CALL_LOG"
 }
+
+@test "init_log_file creates the logs directory and sets MAC_UP_LOG_FILE" {
+  init_log_file
+
+  [ -d "$TEST_HOME/.cache/mac-up/logs" ]
+  [[ "$MAC_UP_LOG_FILE" == "$TEST_HOME/.cache/mac-up/logs/"*".log" ]]
+}
+
+@test "log_info appends a plain-text line to MAC_UP_LOG_FILE with no ANSI escape codes" {
+  init_log_file
+
+  log_info "hello there" >/dev/null
+
+  grep -q "\[INFO\] hello there" "$MAC_UP_LOG_FILE"
+  ! grep -q $'\033' "$MAC_UP_LOG_FILE"
+}
+
+@test "log_warn and log_error append to MAC_UP_LOG_FILE" {
+  init_log_file
+
+  log_warn "careful now" 2>/dev/null
+  log_error "bad thing happened" 2>/dev/null
+
+  grep -q "\[WARN\] careful now" "$MAC_UP_LOG_FILE"
+  grep -q "\[ERROR\] bad thing happened" "$MAC_UP_LOG_FILE"
+}
+
+@test "log_info does not fail when MAC_UP_LOG_FILE is unset" {
+  unset MAC_UP_LOG_FILE
+
+  run log_info "no file yet"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"no file yet"* ]]
+}
+
+@test "init_log_file degrades gracefully when the log directory can't be created" {
+  if [ "$(id -u)" = "0" ]; then
+    skip "chmod-based permission test doesn't work as root"
+  fi
+  mkdir -p "$TEST_HOME/.cache"
+  chmod 555 "$TEST_HOME/.cache"
+
+  init_log_file
+
+  chmod 755 "$TEST_HOME/.cache"
+
+  [ "$MAC_UP_LOG_FILE" = "" ]
+}

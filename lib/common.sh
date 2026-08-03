@@ -11,16 +11,35 @@ resolve_script_dir() {
   cd -P "$(dirname "$source")" >/dev/null 2>&1 && pwd
 }
 
+init_log_file() {
+  local log_dir="$HOME/.cache/mac-up/logs"
+  if mkdir -p "$log_dir" 2>/dev/null; then
+    MAC_UP_LOG_FILE="$log_dir/$(date +%Y-%m-%dT%H%M%S).log"
+  else
+    MAC_UP_LOG_FILE=""
+  fi
+}
+
+_log_write() {
+  local level="$1" msg="$2"
+  if [ -n "${MAC_UP_LOG_FILE:-}" ]; then
+    printf '[%s] [%s] %s\n' "$(date +%Y-%m-%dT%H:%M:%S)" "$level" "$msg" >> "$MAC_UP_LOG_FILE" 2>/dev/null
+  fi
+}
+
 log_info() {
   printf '\033[1;34m==>\033[0m %s\n' "$1"
+  _log_write INFO "$1"
 }
 
 log_warn() {
   printf '\033[1;33m==> warning:\033[0m %s\n' "$1" >&2
+  _log_write WARN "$1"
 }
 
 log_error() {
   printf '\033[1;31m==> error:\033[0m %s\n' "$1" >&2
+  _log_write ERROR "$1"
 }
 
 load_config() {

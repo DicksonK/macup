@@ -87,3 +87,13 @@ teardown() {
   [[ "$output" != *"mapfile: command not found"* ]]
   [[ "$output" == *"Running homebrew"* ]]
 }
+
+@test "mac-up creates a per-run log file and reports its path in the summary" {
+  run "$MAC_UP_BIN" homebrew
+
+  [ "$status" -eq 0 ]
+  log_file="$(ls "$HOME"/.cache/mac-up/logs/*.log)"
+  [ -f "$log_file" ]
+  grep -q "succeeded: homebrew" "$log_file"
+  [[ "$output" == *"Full log: $log_file"* ]]
+}

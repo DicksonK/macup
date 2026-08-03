@@ -75,6 +75,12 @@ run_selected_modules() {
   fi
   if [ "${#failed[@]}" -gt 0 ]; then
     log_warn "  failed: ${failed[*]}"
+  fi
+  if [ -n "${MAC_UP_LOG_FILE:-}" ]; then
+    log_info "Full log: $MAC_UP_LOG_FILE"
+  fi
+
+  if [ "${#failed[@]}" -gt 0 ]; then
     return 1
   fi
   return 0
@@ -114,6 +120,8 @@ main() {
         ;;
     esac
   done
+
+  init_log_file
 
   if [ "$run_all" = true ] || [ "${#modules[@]}" -gt 0 ]; then
     MAC_UP_NONINTERACTIVE=1
