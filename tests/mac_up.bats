@@ -106,3 +106,18 @@ teardown() {
   [[ "$output" == *"Dry run: no changes will be made"* ]]
   [[ "$output" == *"(dry run — nothing was actually changed)"* ]]
 }
+
+@test "mac-up --dry-run --all reports intended actions across every module without calling any mutating stub" {
+  mkdir -p "$HOME/.oh-my-zsh/custom/themes/powerlevel10k"
+
+  run "$MAC_UP_BIN" --dry-run --all
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Dry run: no changes will be made"* ]]
+  [[ "$output" == *"[dry-run] would run: brew bundle"* ]]
+  [[ "$output" == *"(dry run — nothing was actually changed)"* ]]
+  ! grep -q "^brew " "$MAC_UP_CALL_LOG"
+  ! grep -q "ssh-keygen" "$MAC_UP_CALL_LOG"
+  ! grep -q "defaults write" "$MAC_UP_CALL_LOG"
+  ! grep -q "killall" "$MAC_UP_CALL_LOG"
+}
