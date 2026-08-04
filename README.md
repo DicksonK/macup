@@ -26,6 +26,10 @@ mac-up --help
 
 Modules: `homebrew`, `shell`, `dotfiles`, `macos-defaults`, `github`.
 
+See [docs/USAGE.md](docs/USAGE.md) for walkthroughs of common scenarios
+(first run, `--dry-run`, custom dotfiles/Brewfile, GitHub auth, and
+more) with example output.
+
 ## Configuration
 
 On first run (or on demand), `mac-up` offers to create
