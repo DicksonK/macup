@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.1](https://github.com/DicksonK/macup/compare/v0.2.0...v0.2.1) (2026-08-04)
+
+
+### Bug Fixes
+
+* guard formula commit against empty diff, clean up tarball ([473f6b6](https://github.com/DicksonK/macup/commit/473f6b6d16534b3f536d71d4d636c921fbcefc4f))
+* report a clear error when -d/-b is given with no value ([376b2c6](https://github.com/DicksonK/macup/commit/376b2c6e5a908dce84c225f8b1c1f2ad5a0cddc9))
+
 ## [0.2.0](https://github.com/DicksonK/macup/compare/v0.1.0...v0.2.0) (2026-08-04)
 
 
