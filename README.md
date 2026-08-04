@@ -146,3 +146,9 @@ and GitHub Actions:
    the [homebrew-macup](https://github.com/dicksonk/homebrew-macup) tap.
 
 No manual tagging, checksum computation, or formula editing needed.
+
+**One-time setup:** the tap-update step needs a fine-grained GitHub PAT
+scoped to `contents:write` on `dicksonk/homebrew-macup` only, saved as
+a repository secret named `HOMEBREW_TAP_TOKEN` (Settings → Secrets and
+variables → Actions) in this repo. Without it, releases still tag and
+publish, but the Homebrew tap push step fails.

@@ -358,6 +358,7 @@ debugging a run that failed partway through, check the summary's
 | `--dotfiles-repo=<url>` | `-d <url>` | Override `DOTFILES_REPO` for this run only |
 | `--brewfile=<path>` | `-b <path>` | Override `EXTRA_BREWFILE` for this run only |
 | `--help` | `-h` | Show usage and exit |
+| `--version` | `-v` | Print the installed version and exit |
 
 `--dry-run` combines with any of the above (`--dry-run --all`,
 `--dry-run --dotfiles-repo=... dotfiles`, or bare `--dry-run` for an
