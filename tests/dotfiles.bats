@@ -248,3 +248,15 @@ teardown() {
   [ "$status" -eq 0 ]
   [[ "$output" == *"Git identity already configured in $HOME/.gitconfig.local, skipping"* ]]
 }
+
+@test "run_dotfiles reports the existing backup in dry-run mode instead of a bogus overwrite prompt" {
+  echo "my custom zshrc" > "$HOME/.zshrc"
+  echo "previous backup contents" > "$HOME/.zshrc.mac-up-backup"
+  export MAC_UP_DRY_RUN=1
+
+  run run_dotfiles
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"backup $HOME/.zshrc.mac-up-backup already exists"* ]]
+  [[ "$output" != *"would prompt to back up and replace $HOME/.zshrc"* ]]
+}

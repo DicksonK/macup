@@ -121,3 +121,11 @@ teardown() {
   ! grep -q "defaults write" "$MAC_UP_CALL_LOG"
   ! grep -q "killall" "$MAC_UP_CALL_LOG"
 }
+
+@test "mac-up --dry-run alone does not prompt for config creation or write a config file" {
+  run "$MAC_UP_BIN" --dry-run
+
+  [ "$status" -eq 0 ]
+  [ ! -f "$HOME/.config/mac-up/config" ]
+  ! grep -q "gum confirm" "$MAC_UP_CALL_LOG"
+}

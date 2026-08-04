@@ -29,8 +29,12 @@ run_github() {
   if [ -f "$key_path.pub" ]; then
     log_info "Public key:"
     cat "$key_path.pub"
-    pbcopy < "$key_path.pub" 2>/dev/null || true
-    log_info "Public key copied to clipboard (if pbcopy is available)"
+    if is_dry_run; then
+      dry_run_report "copy the public key to the clipboard"
+    else
+      pbcopy < "$key_path.pub" 2>/dev/null || true
+      log_info "Public key copied to clipboard (if pbcopy is available)"
+    fi
   fi
 
   if ! gh auth status >/dev/null 2>&1; then

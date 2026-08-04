@@ -20,6 +20,7 @@ mac-up --all                    # run all modules, non-interactive
 mac-up homebrew dotfiles        # run only the named modules, non-interactive
 mac-up --dotfiles-repo=<url> dotfiles
 mac-up --brewfile=<path> homebrew
+mac-up --dry-run --all          # preview every module's intended actions, no changes made
 mac-up --help
 ```
 
@@ -49,6 +50,14 @@ the `repo`, `read:org`, `gist`, and `admin:public_key` scopes, created
 at https://github.com/settings/tokens. It's used for `gh auth login
 --with-token`, and the generated SSH key is then auto-uploaded to your
 account via `gh ssh-key add`.
+
+`--dry-run` reports what each selected module would do without making
+any changes or prompting for input. It can't predict `brew bundle`'s
+exact package-by-package plan, so the homebrew module reports the
+command it would run generically rather than diffing packages. If
+`DOTFILES_REPO` is set and this is the first run (no local clone yet),
+it likewise can't preview which files an unfetched external repo
+contains.
 
 Every run also writes its `log_info`/`log_warn`/`log_error` output to a
 plain-text log at `~/.cache/mac-up/logs/<timestamp>.log` — one file per

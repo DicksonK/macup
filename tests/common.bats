@@ -211,3 +211,13 @@ EOF
   [ "$status" -eq 0 ]
   [[ "$output" == *"[dry-run] would do the thing"* ]]
 }
+
+@test "load_config skips the create-config prompt in dry-run mode without prompting or writing" {
+  export MAC_UP_DRY_RUN=1
+  export GUM_CONFIRM_EXIT=0
+
+  load_config
+
+  [ ! -f "$TEST_HOME/.config/mac-up/config" ]
+  ! grep -q "gum confirm" "$MAC_UP_CALL_LOG"
+}

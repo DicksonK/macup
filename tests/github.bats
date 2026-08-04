@@ -184,3 +184,18 @@ teardown() {
   [ "$status" -eq 0 ]
   [[ "$output" == *"SSH key already registered with GitHub, skipping"* ]]
 }
+
+@test "run_github does not copy to clipboard in dry-run mode when the key already exists" {
+  mkdir -p "$HOME/.ssh"
+  echo "existing-key" > "$HOME/.ssh/id_ed25519"
+  echo "ssh-ed25519 AAAAtest existing@example.com" > "$HOME/.ssh/id_ed25519.pub"
+  export GH_AUTH_STATUS_EXIT=0
+  export GH_REGISTERED_KEYS="AAAAtest"
+  export MAC_UP_DRY_RUN=1
+
+  run run_github
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"[dry-run] would copy the public key to the clipboard"* ]]
+  ! grep -q "pbcopy" "$MAC_UP_CALL_LOG"
+}

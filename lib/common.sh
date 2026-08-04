@@ -65,6 +65,10 @@ load_config() {
     if [ "${MAC_UP_NONINTERACTIVE:-0}" = "1" ]; then
       return 0
     fi
+    if is_dry_run; then
+      dry_run_report "prompt to create a default config at $config_file"
+      return 0
+    fi
     if ui_confirm "No config found. Create default config at $config_file?"; then
       mkdir -p "$config_dir"
       cp "$example_file" "$config_file"

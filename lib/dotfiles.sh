@@ -56,14 +56,23 @@ run_dotfiles() {
       continue
     fi
 
+    local backup_exists=false
+    if [ -e "$target.mac-up-backup" ] || [ -L "$target.mac-up-backup" ]; then
+      backup_exists=true
+    fi
+
     if is_dry_run; then
-      dry_run_report "prompt to back up and replace $target"
-      linked_count=$((linked_count + 1))
+      if [ "$backup_exists" = true ]; then
+        log_warn "Skipped $target: backup $target.mac-up-backup already exists"
+      else
+        dry_run_report "prompt to back up and replace $target"
+        linked_count=$((linked_count + 1))
+      fi
       continue
     fi
 
     if ui_confirm "$target already exists. Back it up and replace with symlink?"; then
-      if [ -e "$target.mac-up-backup" ] || [ -L "$target.mac-up-backup" ]; then
+      if [ "$backup_exists" = true ]; then
         log_warn "Skipped $target: backup $target.mac-up-backup already exists"
         continue
       fi
