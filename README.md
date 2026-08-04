@@ -12,6 +12,16 @@ brew tap dicksonk/macup
 brew install macup
 ```
 
+On Homebrew versions with tap trust checks, the first `brew install` from
+a newly added tap prompts:
+
+```
+Error: Refusing to load formula dicksonk/macup/macup from untrusted tap dicksonk/macup.
+Run `brew trust --formula dicksonk/macup/macup` or `brew trust dicksonk/macup` to trust it.
+```
+
+Run `brew trust dicksonk/macup` once, then retry `brew install macup`.
+
 ## Usage
 
 ```sh
