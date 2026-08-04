@@ -36,6 +36,7 @@ jobs:
           curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
             "https://github.com/dicksonk/macup/archive/refs/tags/${TAG}.tar.gz" -o release.tar.gz
           echo "sha256=$(shasum -a 256 release.tar.gz | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          rm -f release.tar.gz
 
       - name: Update packaging/homebrew/macup.rb
         run: |
@@ -49,8 +50,12 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add packaging/homebrew/macup.rb
-          git commit -m "chore: update packaging/homebrew/macup.rb for ${TAG}"
-          git push
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: update packaging/homebrew/macup.rb for ${TAG}"
+            git push
+          fi
 
       - name: Push updated formula to homebrew-macup tap
         env:
