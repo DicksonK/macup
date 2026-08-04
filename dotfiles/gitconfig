@@ -1,8 +1,82 @@
 [include]
-	path = ~/.gitconfig.local
-[init]
-	defaultBranch = main
-[pull]
-	rebase = false
+	path = ~/.gitconfig.local  # per-machine user.name/user.email, written by mac-up
+
 [core]
-	editor = vim
+    autocrlf = input  # keep newlines as in input
+    compression = 9  # trade cpu for network
+    fsync = none  # trade durability for speed (risk: lost objects on a crash)
+    whitespace = error  # threat incorrect whitespace as errors
+
+[advice]  # disable advices
+    addEmptyPathspec = false
+    pushNonFastForward = false
+    statusHints = false
+
+[blame]
+    coloring = highlightRecent
+    date = relative
+
+[diff]
+    context = 3  # less context in diffs
+    renames = copies  # detect copies as renames in diffs
+    interHunkContext = 10  # merge near hunks in diffs
+
+[init]
+    defaultBranch = main
+
+[log]
+    abbrevCommit = true  # short commits
+    graphColors = blue,yellow,cyan,magenta,green,red
+
+[status]  # richer status output
+    branch = true
+    short = true
+    showStash = true
+    showUntrackedFiles = all  # show individual untracked files
+
+[pager]
+    branch = false  # no need to use pager for git branch
+    diff = diff-so-fancy | $PAGER  # diff-so-fancy as diff pager
+
+[push]
+    autoSetupRemote = true  # easier to push new branches
+    default = current  # push only current branch by default
+    followTags = true  # push also tags
+
+[pull]
+    rebase = true  # rebase local commits instead of merging on pull
+
+[submodule]
+    fetchJobs = 16  # fetch submodules in parallel
+
+[rebase]
+    autoStash = true  # stash and reapply local changes around rebase
+
+# Colors
+[color "blame"]
+    highlightRecent = black bold,1 year ago,white,1 month ago,default,7 days ago,blue
+
+[color "branch"]
+    current  = magenta
+    local    = default
+    remote   = yellow
+    upstream = green
+    plain    = blue
+
+[color "diff"]
+    meta       = black bold
+    frag       = magenta
+    context    = white
+    whitespace = yellow reverse
+
+[interactive]
+    diffFilter = diff-so-fancy --patch  # colorize interactive add/patch view
+    singlekey = true  # single keypress for interactive prompts, no enter needed
+
+# Third-party: diff-so-fancy
+[diff-so-fancy]
+    markEmptyLines = false
+
+# URL shortcuts
+[url "git@github.com:"]
+    insteadOf = "gh:"
