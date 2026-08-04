@@ -57,9 +57,17 @@ Triggers: `push` (any branch) and `pull_request` (targeting `main`).
   `ubuntu-latest`, or via `apt-get install -y shellcheck` as a fallback),
   runs `shellcheck bin/macup lib/*.sh`. Both currently pass with zero
   warnings, so this job starts green.
+- **`actionlint` job** — runs on `ubuntu-latest`, uses
+  `rhysd/actionlint` (via its published action or downloaded binary) to
+  lint `.github/workflows/*.yml`. Catches invalid workflow syntax,
+  unknown/misused contexts and expressions, and — via actionlint's
+  built-in shellcheck integration — problems in the inline `run:` bash
+  used by `release-please.yml`'s tap-update job. Relevant now because
+  this spec introduces the first non-trivial multi-step `run:` scripts
+  in the repo's workflow files.
 
-Both jobs run independently (no `needs:` between them) so a lint
-failure doesn't block seeing test results and vice versa.
+All three jobs run independently (no `needs:` between them) so a
+failure in one doesn't block seeing the others' results.
 
 ### 3. `release-please-config.json` + `.release-please-manifest.json`
 
