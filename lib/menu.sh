@@ -2,6 +2,7 @@
 
 ui_choose_modules() {
   gum choose --no-limit \
+    --header "Select modules (space to toggle, enter to confirm):" \
     "homebrew: Install Homebrew packages from the Brewfile" \
     "shell: Install Oh My Zsh + Powerlevel10k" \
     "dotfiles: Symlink dotfiles into \$HOME" \

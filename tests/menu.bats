@@ -21,6 +21,15 @@ dotfiles: Symlink dotfiles into \$HOME"
   [ "${lines[1]}" = "dotfiles" ]
 }
 
+@test "ui_choose_modules shows a header explaining space/enter controls" {
+  run ui_choose_modules
+
+  [ "$status" -eq 0 ]
+  grep -q -- "--header" "$MACUP_CALL_LOG"
+  grep -qi "space" "$MACUP_CALL_LOG"
+  grep -qi "enter" "$MACUP_CALL_LOG"
+}
+
 @test "ui_confirm returns success when gum confirm succeeds" {
   export GUM_CONFIRM_EXIT=0
   run ui_confirm "proceed?"
