@@ -2,10 +2,10 @@
 
 ## Purpose
 
-Two related gaps in the current `mac-up` implementation:
+Two related gaps in the current `macup` implementation:
 
 1. The bundled `dotfiles/gitconfig` ships with blank `user.name`/`user.email`,
-   and nothing in `mac-up` ever sets them — a fresh Mac ends up with git
+   and nothing in `macup` ever sets them — a fresh Mac ends up with git
    commits attributed to nobody until the user manually configures git.
 2. `github.sh`'s SSH+auth setup requires two manual, browser-dependent
    steps: pasting the generated SSH public key into GitHub's website, and
@@ -13,7 +13,7 @@ Two related gaps in the current `mac-up` implementation:
    Neither works headlessly, and `gh` CLI can already automate SSH key
    upload once authenticated via a Personal Access Token (PAT).
 
-This spec adds: (a) a per-machine git identity file managed by `mac-up`,
+This spec adds: (a) a per-machine git identity file managed by `macup`,
 and (b) a token-based, more automatable GitHub auth + SSH key registration
 flow that reuses the identity email captured in (a).
 
@@ -23,8 +23,8 @@ flow that reuses the identity email captured in (a).
   any file other than gitconfig's identity split.
 - No support for GitHub Enterprise or non-github.com hosts.
 - No attempt to auto-detect/parse fine-grained vs classic PAT scopes —
-  mac-up just documents the required scope in its prompt.
-- Does not persist the PAT itself anywhere in mac-up's own files — `gh
+  macup just documents the required scope in its prompt.
+- Does not persist the PAT itself anywhere in macup's own files — `gh
   auth login --with-token` hands the token to gh's own secure credential
   storage.
 
@@ -47,7 +47,7 @@ flow that reuses the identity email captured in (a).
 ```
 
 `~/.gitconfig.local` is a plain file (never a symlink, never tracked by
-any repo — bundled or external) that `mac-up` creates/updates directly on
+any repo — bundled or external) that `macup` creates/updates directly on
 the target machine.
 
 ### `run_dotfiles()` addition
@@ -113,7 +113,7 @@ run_github():
      - registered = gh api user/keys --jq '.[].key' | grep -qF
        "$(awk '{print $2}' ~/.ssh/id_ed25519.pub)"
   7. If not registered:
-     - gh ssh-key add ~/.ssh/id_ed25519.pub --title "mac-up ($(scutil
+     - gh ssh-key add ~/.ssh/id_ed25519.pub --title "macup ($(scutil
        --get ComputerName 2>/dev/null || hostname))"
      - on failure: log_warn "Failed to auto-register SSH key with
        GitHub — add it manually at https://github.com/settings/keys
@@ -131,7 +131,7 @@ run_github():
   already has the printed/copied public key as a manual fallback.
 - The token itself is never logged, never passed as a CLI argument (only
   via stdin to `gh auth login --with-token`), and never written to any
-  mac-up-managed file.
+  macup-managed file.
 
 ## 3. Testing
 

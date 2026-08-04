@@ -11,7 +11,7 @@ case "$1" in
     ;;
   write)
     domain="$2"; key="$3"; type="$4"; value="$5"
-    echo "defaults write $domain $key $value" >> "${MAC_UP_CALL_LOG:-/dev/null}"
+    echo "defaults write $domain $key $value" >> "${MACUP_CALL_LOG:-/dev/null}"
     if [ -n "${DEFAULTS_WRITE_EXIT:-}" ] && [ "$DEFAULTS_WRITE_EXIT" != "0" ]; then
       exit "$DEFAULTS_WRITE_EXIT"
     fi

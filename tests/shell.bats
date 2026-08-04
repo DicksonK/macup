@@ -2,14 +2,14 @@
 
 setup() {
   load 'test_helper/load'
-  mac_up_test_setup
+  macup_test_setup
   source "$ROOT_DIR/lib/common.sh"
   source "$ROOT_DIR/lib/menu.sh"
   source "$ROOT_DIR/lib/shell.sh"
 }
 
 teardown() {
-  mac_up_test_teardown
+  macup_test_teardown
 }
 
 @test "run_shell skips all installs when oh-my-zsh, powerlevel10k, and zsh plugins already exist" {
@@ -26,7 +26,7 @@ teardown() {
   [[ "$output" == *"zsh-autosuggestions already installed"* ]]
   [[ "$output" == *"zsh-syntax-highlighting already installed"* ]]
   [[ "$output" == *"zsh-uv-env already installed"* ]]
-  [ ! -f "$MAC_UP_CALL_LOG" ] || ! grep -q "git clone" "$MAC_UP_CALL_LOG"
+  [ ! -f "$MACUP_CALL_LOG" ] || ! grep -q "git clone" "$MACUP_CALL_LOG"
 }
 
 @test "run_shell clones powerlevel10k when oh-my-zsh exists but the theme doesn't" {
@@ -36,7 +36,7 @@ teardown() {
 
   [ "$status" -eq 0 ]
   [ -d "$HOME/.oh-my-zsh/custom/themes/powerlevel10k" ]
-  grep -q "clone --depth=1" "$MAC_UP_CALL_LOG"
+  grep -q "clone --depth=1" "$MACUP_CALL_LOG"
 }
 
 @test "run_shell clones zsh-autosuggestions when missing" {
@@ -46,7 +46,7 @@ teardown() {
 
   [ "$status" -eq 0 ]
   [ -d "$HOME/.oh-my-zsh/custom/plugins/zsh-autosuggestions" ]
-  grep -q "clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions.git" "$MAC_UP_CALL_LOG"
+  grep -q "clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions.git" "$MACUP_CALL_LOG"
 }
 
 @test "run_shell clones zsh-syntax-highlighting when missing" {
@@ -56,7 +56,7 @@ teardown() {
 
   [ "$status" -eq 0 ]
   [ -d "$HOME/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting" ]
-  grep -q "clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting.git" "$MAC_UP_CALL_LOG"
+  grep -q "clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting.git" "$MACUP_CALL_LOG"
 }
 
 @test "run_shell clones zsh-uv-env when missing" {
@@ -66,11 +66,11 @@ teardown() {
 
   [ "$status" -eq 0 ]
   [ -d "$HOME/.oh-my-zsh/custom/plugins/zsh-uv-env" ]
-  grep -q "clone --depth=1 https://github.com/matthiasha/zsh-uv-env.git" "$MAC_UP_CALL_LOG"
+  grep -q "clone --depth=1 https://github.com/matthiasha/zsh-uv-env.git" "$MACUP_CALL_LOG"
 }
 
 @test "run_shell reports what it would do in dry-run mode without installing anything" {
-  export MAC_UP_DRY_RUN=1
+  export MACUP_DRY_RUN=1
 
   run run_shell
 
@@ -85,7 +85,7 @@ teardown() {
 
 @test "run_shell reports the Powerlevel10k clone in dry-run mode when Oh My Zsh already exists" {
   mkdir -p "$HOME/.oh-my-zsh"
-  export MAC_UP_DRY_RUN=1
+  export MACUP_DRY_RUN=1
 
   run run_shell
 

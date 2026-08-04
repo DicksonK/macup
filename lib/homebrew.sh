@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 
-: "${MAC_UP_BREW_PATH_APPLE_SILICON:=/opt/homebrew/bin/brew}"
-: "${MAC_UP_BREW_PATH_INTEL:=/usr/local/bin/brew}"
+: "${MACUP_BREW_PATH_APPLE_SILICON:=/opt/homebrew/bin/brew}"
+: "${MACUP_BREW_PATH_INTEL:=/usr/local/bin/brew}"
 
 run_homebrew() {
   local brew_bin=""
-  if [ -x "$MAC_UP_BREW_PATH_APPLE_SILICON" ]; then
-    brew_bin="$MAC_UP_BREW_PATH_APPLE_SILICON"
-  elif [ -x "$MAC_UP_BREW_PATH_INTEL" ]; then
-    brew_bin="$MAC_UP_BREW_PATH_INTEL"
+  if [ -x "$MACUP_BREW_PATH_APPLE_SILICON" ]; then
+    brew_bin="$MACUP_BREW_PATH_APPLE_SILICON"
+  elif [ -x "$MACUP_BREW_PATH_INTEL" ]; then
+    brew_bin="$MACUP_BREW_PATH_INTEL"
   fi
 
   if [ -z "$brew_bin" ]; then
@@ -20,10 +20,10 @@ run_homebrew() {
         log_error "Homebrew installation failed"
         return 1
       fi
-      if [ -x "$MAC_UP_BREW_PATH_APPLE_SILICON" ]; then
-        brew_bin="$MAC_UP_BREW_PATH_APPLE_SILICON"
+      if [ -x "$MACUP_BREW_PATH_APPLE_SILICON" ]; then
+        brew_bin="$MACUP_BREW_PATH_APPLE_SILICON"
       else
-        brew_bin="$MAC_UP_BREW_PATH_INTEL"
+        brew_bin="$MACUP_BREW_PATH_INTEL"
       fi
     fi
   fi

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-echo "ssh-keygen $*" >> "${MAC_UP_CALL_LOG:-/dev/null}"
+echo "ssh-keygen $*" >> "${MACUP_CALL_LOG:-/dev/null}"
 prev=""
 keypath=""
 for arg in "$@"; do

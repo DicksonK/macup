@@ -4,7 +4,7 @@ run_dotfiles() {
   local source_dir
 
   if [ -n "${DOTFILES_REPO:-}" ]; then
-    local cache_dir="$HOME/.cache/mac-up/dotfiles-repo"
+    local cache_dir="$HOME/.cache/macup/dotfiles-repo"
     if [ -d "$cache_dir/.git" ]; then
       if is_dry_run; then
         dry_run_report "update the dotfiles repo cache at $cache_dir"
@@ -57,13 +57,13 @@ run_dotfiles() {
     fi
 
     local backup_exists=false
-    if [ -e "$target.mac-up-backup" ] || [ -L "$target.mac-up-backup" ]; then
+    if [ -e "$target.macup-backup" ] || [ -L "$target.macup-backup" ]; then
       backup_exists=true
     fi
 
     if is_dry_run; then
       if [ "$backup_exists" = true ]; then
-        log_warn "Skipped $target: backup $target.mac-up-backup already exists"
+        log_warn "Skipped $target: backup $target.macup-backup already exists"
       else
         dry_run_report "prompt to back up and replace $target"
         linked_count=$((linked_count + 1))
@@ -73,10 +73,10 @@ run_dotfiles() {
 
     if ui_confirm "$target already exists. Back it up and replace with symlink?"; then
       if [ "$backup_exists" = true ]; then
-        log_warn "Skipped $target: backup $target.mac-up-backup already exists"
+        log_warn "Skipped $target: backup $target.macup-backup already exists"
         continue
       fi
-      if ! mv "$target" "$target.mac-up-backup"; then
+      if ! mv "$target" "$target.macup-backup"; then
         log_error "Failed to back up $target, skipping"
         continue
       fi

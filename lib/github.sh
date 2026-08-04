@@ -66,7 +66,7 @@ run_github() {
     elif is_dry_run; then
       dry_run_report "upload the SSH key to GitHub via gh ssh-key add"
     else
-      if ! gh ssh-key add "$key_path.pub" --title "mac-up ($(scutil --get ComputerName 2>/dev/null || hostname))"; then
+      if ! gh ssh-key add "$key_path.pub" --title "macup ($(scutil --get ComputerName 2>/dev/null || hostname))"; then
         log_warn "Failed to auto-register SSH key with GitHub — add it manually at https://github.com/settings/keys using the public key printed above"
       fi
     fi

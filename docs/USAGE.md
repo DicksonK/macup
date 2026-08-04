@@ -1,10 +1,10 @@
-# mac-up Usage Guide
+# macup Usage Guide
 
 The README covers installation and a quick flag reference. This guide
 walks through common scenarios end-to-end, with example commands and
 what you'll actually see on screen.
 
-A note on the transcripts below: `mac-up`'s own status lines (`==> ...`)
+A note on the transcripts below: `macup`'s own status lines (`==> ...`)
 are shown verbatim — that's exactly what `log_info`/`log_warn` print.
 Interactive prompts are rendered by [`gum`](https://github.com/charmbracelet/gum)
 as styled boxes, not plain text; the transcripts show them as `? <prompt>: <what you'd type>`
@@ -29,19 +29,19 @@ for readability, not as literal terminal output.
 ## First run on a fresh Mac
 
 ```sh
-brew tap dicksonk/mac-up
-brew install mac-up
-mac-up
+brew tap dicksonk/macup
+brew install macup
+macup
 ```
 
-With no flags or module names, `mac-up` shows an interactive checklist
+With no flags or module names, `macup` shows an interactive checklist
 (five modules: `homebrew`, `shell`, `dotfiles`, `macos-defaults`,
 `github`) — space to toggle, enter to confirm. If this is your first
-run and `~/.config/mac-up/config` doesn't exist yet, you'll also be
+run and `~/.config/macup/config` doesn't exist yet, you'll also be
 asked once whether to create it from the bundled example:
 
 ```
-? No config found. Create default config at ~/.config/mac-up/config? [y/N]
+? No config found. Create default config at ~/.config/macup/config? [y/N]
 ```
 
 Say yes if you want to persist a custom `DOTFILES_REPO`/`EXTRA_BREWFILE`
@@ -68,9 +68,9 @@ five; a full run looks roughly like this:
   [... official Oh My Zsh installer output ...]
 ==> Cloning Powerlevel10k
 ==> Running dotfiles
-==> Linked /Users/you/.zshrc -> /opt/homebrew/opt/mac-up/libexec/dotfiles/zshrc
-==> Linked /Users/you/.p10k.zsh -> /opt/homebrew/opt/mac-up/libexec/dotfiles/p10k.zsh
-==> Linked /Users/you/.gitconfig -> /opt/homebrew/opt/mac-up/libexec/dotfiles/gitconfig
+==> Linked /Users/you/.zshrc -> /opt/homebrew/opt/macup/libexec/dotfiles/zshrc
+==> Linked /Users/you/.p10k.zsh -> /opt/homebrew/opt/macup/libexec/dotfiles/p10k.zsh
+==> Linked /Users/you/.gitconfig -> /opt/homebrew/opt/macup/libexec/dotfiles/gitconfig
 ? Git user.name: Ada Lovelace
 ? Git user.email: ada@example.com
 ==> Wrote git identity to /Users/you/.gitconfig.local
@@ -88,7 +88,7 @@ ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAII... ada@example.com
 
 ==> Summary:
 ==>   succeeded: homebrew shell dotfiles macos-defaults github
-==> Full log: /Users/you/.cache/mac-up/logs/2026-08-04T091530.log
+==> Full log: /Users/you/.cache/macup/logs/2026-08-04T091530.log
 ```
 
 Notice the `github` module never asked for an email — it reused
@@ -103,14 +103,14 @@ already linked, what's already configured), but nothing actually
 changes, and no prompt ever blocks the run:
 
 ```sh
-mac-up --dry-run --all
+macup --dry-run --all
 ```
 
 ```
 ==> Dry run: no changes will be made
-==> mac-up run: mac-up --dry-run --all
+==> macup run: macup --dry-run --all
 ==> Running homebrew
-==> [dry-run] would run: brew bundle --file=/opt/homebrew/opt/mac-up/libexec/Brewfile
+==> [dry-run] would run: brew bundle --file=/opt/homebrew/opt/macup/libexec/Brewfile
 ==> Running shell
 ==> Oh My Zsh already installed, skipping
 ==> Powerlevel10k already installed, skipping
@@ -127,7 +127,7 @@ mac-up --dry-run --all
 ==> Summary:
 ==>   succeeded: homebrew shell dotfiles macos-defaults github
 ==> (dry run — nothing was actually changed)
-==> Full log: /Users/you/.cache/mac-up/logs/2026-08-04T093012.log
+==> Full log: /Users/you/.cache/macup/logs/2026-08-04T093012.log
 ```
 
 Two things `--dry-run` genuinely can't predict, by design: `brew
@@ -142,16 +142,16 @@ repo, but not which files are inside it).
 For provisioning scripts, CI images, or just skipping the checklist:
 
 ```sh
-mac-up --all                    # every module, no prompts about which to run
-mac-up homebrew dotfiles        # just these two, still non-interactive
+macup --all                    # every module, no prompts about which to run
+macup homebrew dotfiles        # just these two, still non-interactive
 ```
 
 Passing `--all` or any module name makes the run non-interactive — no
 module checklist, and (if no config file exists yet) no "create a
 config?" prompt either; it silently proceeds with bundled defaults. If
 you need a custom `DOTFILES_REPO`/`EXTRA_BREWFILE` in a non-interactive
-run, either create `~/.config/mac-up/config` ahead of time (by hand, or
-by running `mac-up` interactively once) or pass `--dotfiles-repo=`/
+run, either create `~/.config/macup/config` ahead of time (by hand, or
+by running `macup` interactively once) or pass `--dotfiles-repo=`/
 `--brewfile=` on the command line (see below) — both work without any
 config file at all.
 
@@ -160,8 +160,8 @@ config file at all.
 Modules are independent — each is safe to run alone, any time:
 
 ```sh
-mac-up macos-defaults           # just re-apply the curated system settings
-mac-up dotfiles github          # just re-link dotfiles and check GitHub auth
+macup macos-defaults           # just re-apply the curated system settings
+macup dotfiles github          # just re-link dotfiles and check GitHub auth
 ```
 
 `github` in particular is designed to work standalone: it defaults its
@@ -172,7 +172,7 @@ have to run modules in any particular combination.
 ## Re-running later to stay in sync
 
 Every module is idempotent — it checks live system state first and only
-changes what's actually missing or different. Re-running `mac-up --all`
+changes what's actually missing or different. Re-running `macup --all`
 after you've already set everything up mostly just prints "already
 ..., skipping" lines and finishes in a few seconds:
 
@@ -198,7 +198,7 @@ after you've already set everything up mostly just prints "already
 
 ==> Summary:
 ==>   succeeded: homebrew shell dotfiles macos-defaults github
-==> Full log: /Users/you/.cache/mac-up/logs/2026-08-04T140203.log
+==> Full log: /Users/you/.cache/macup/logs/2026-08-04T140203.log
 ```
 
 This is also why `--dry-run` is safe to run as often as you like — it's
@@ -207,33 +207,33 @@ the same idempotency checks, just with the mutating half turned off.
 ## Using your own dotfiles repo
 
 By default, `dotfiles` symlinks the bundled `.zshrc`/`.p10k.zsh`/
-`.gitconfig` from mac-up's own install directory. Point it at your own
+`.gitconfig` from macup's own install directory. Point it at your own
 repo instead — a one-off override:
 
 ```sh
-mac-up --dotfiles-repo=git@github.com:you/dotfiles.git dotfiles
+macup --dotfiles-repo=git@github.com:you/dotfiles.git dotfiles
 ```
 
-or persist it in `~/.config/mac-up/config`:
+or persist it in `~/.config/macup/config`:
 
 ```sh
 DOTFILES_REPO=git@github.com:you/dotfiles.git
 ```
 
-First run clones it into `~/.cache/mac-up/dotfiles-repo`; later runs
+First run clones it into `~/.cache/macup/dotfiles-repo`; later runs
 `git pull --ff-only` that same clone instead of re-cloning. Every
 top-level file in the repo gets symlinked into `$HOME` as `.<filename>`
 — `zshrc` → `~/.zshrc`, `gitconfig` → `~/.gitconfig`, and so on, exactly
 like the bundled set. Files whose names already start with a `.` (e.g.
 a repo that already contains literal `.zshrc` rather than `zshrc`) won't
-match — mac-up's own convention expects plain filenames and adds the
+match — macup's own convention expects plain filenames and adds the
 leading dot itself.
 
 Prefer `git@host:...` (SSH) over an `https://user:token@host/...` URL
 if you can — SSH auth is what the `github` module sets up for you, and
-credentials embedded in an HTTPS URL, while never logged by mac-up
+credentials embedded in an HTTPS URL, while never logged by macup
 (embedded credentials are redacted before any log line), still sit in
-your shell history and `~/.config/mac-up/config` in plain text.
+your shell history and `~/.config/macup/config` in plain text.
 
 ## Adding your own Homebrew packages
 
@@ -242,7 +242,7 @@ The bundled `Brewfile` covers a curated general-purpose set (see the
 To layer your own packages on top without forking it:
 
 ```sh
-mac-up --brewfile=/Users/you/Brewfile.personal homebrew
+macup --brewfile=/Users/you/Brewfile.personal homebrew
 ```
 
 or persist it:
@@ -291,7 +291,7 @@ identity however it likes, and `dotfiles` never touches
 ## GitHub SSH + auth in depth
 
 ```sh
-mac-up github
+macup github
 ```
 
 1. **SSH key.** If `~/.ssh/id_ed25519` doesn't exist, one is generated
@@ -313,10 +313,10 @@ mac-up github
    ```
 
    The token is never echoed, never logged, and never written to any
-   mac-up file — it goes straight to `gh auth login --with-token` over
+   macup file — it goes straight to `gh auth login --with-token` over
    stdin, and `gh` takes over storing it securely from there. If you'd
    rather not paste a token, run `gh auth login` yourself first (its own
-   interactive browser flow) — `mac-up github` only prompts when `gh
+   interactive browser flow) — `macup github` only prompts when `gh
    auth status` fails.
 3. **Registration.** Once authenticated, the SSH key is checked against
    your GitHub account (`gh api user/keys`) and auto-uploaded via `gh
@@ -328,14 +328,14 @@ mac-up github
 ## Reading the log file
 
 Every run writes its own status lines to
-`~/.cache/mac-up/logs/<timestamp>.log` — one file per run, plain text,
+`~/.cache/macup/logs/<timestamp>.log` — one file per run, plain text,
 no ANSI color codes, no rotation. The path is printed at the end of
 every run's summary. It captures the same `==> ...` lines you saw on
 screen (including `[dry-run]` lines), plus a header recording exactly
 how it was invoked:
 
 ```
-[2026-08-04T09:15:30] [INFO] mac-up run: mac-up --all
+[2026-08-04T09:15:30] [INFO] macup run: macup --all
 [2026-08-04T09:15:30] [INFO] Running homebrew
 [2026-08-04T09:15:31] [INFO] Running brew bundle with default Brewfile
 ...
@@ -343,7 +343,7 @@ how it was invoked:
 
 It does **not** capture raw subcommand output (`brew`'s own install
 progress, `git clone`'s progress, etc.) or `gum`'s interactive
-rendering — only mac-up's own status lines, so it stays small and
+rendering — only macup's own status lines, so it stays small and
 readable rather than becoming a full terminal transcript. If you're
 debugging a run that failed partway through, check the summary's
 `failed: ...` line for which module, then re-run just that module
@@ -371,6 +371,6 @@ interactive-selection-but-non-mutating preview).
 | `macos-defaults` | Applies a curated set of Finder/keyboard/trackpad/screenshot settings |
 | `github` | Generates an SSH key, authenticates `gh` via a PAT, and registers the key with GitHub |
 
-Passing any module name(s) as positional arguments (`mac-up homebrew
+Passing any module name(s) as positional arguments (`macup homebrew
 github`) runs just those, non-interactively, in the fixed order above
 regardless of the order you listed them.

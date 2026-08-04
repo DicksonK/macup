@@ -2,13 +2,13 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add `mac-up --dry-run`: every module still runs its real,
+**Goal:** Add `macup --dry-run`: every module still runs its real,
 read-only detection/idempotency logic, but every mutation and every
 interactive prompt is replaced with a `[dry-run] would ...` report line.
 
 **Architecture:** Two small helpers in `lib/common.sh`
-(`is_dry_run`, `dry_run_report`) plus a `--dry-run` flag in `bin/mac-up`
-that exports `MAC_UP_DRY_RUN`. Each of the five modules gets `if
+(`is_dry_run`, `dry_run_report`) plus a `--dry-run` flag in `bin/macup`
+that exports `MACUP_DRY_RUN`. Each of the five modules gets `if
 is_dry_run; then dry_run_report "..."; else <real action>; fi` guards at
 its specific mutation/prompt points — no shared command wrapper, since
 the curl-piped installers (Homebrew, Oh My Zsh) would still execute their
@@ -24,7 +24,7 @@ interactive prompts aren't "commands" a wrapper could intercept anyway.
   setting/key already exist or match) always runs for real, even in
   dry-run — that's what makes the report accurate. Only an actual
   mutation or an interactive prompt gets guarded.
-- `--dry-run` is orthogonal to `MAC_UP_NONINTERACTIVE`/`--all`/module
+- `--dry-run` is orthogonal to `MACUP_NONINTERACTIVE`/`--all`/module
   selection — it does not force non-interactive module selection.
 - The curl-piped installers (Homebrew's install script, Oh My Zsh's
   install script) must have their *entire* invocation inside the
@@ -39,10 +39,10 @@ interactive prompts aren't "commands" a wrapper could intercept anyway.
   (`cat`, `pbcopy`) is **not** guarded — it's reading an unchanged,
   pre-existing artifact, not a mutation, and runs the same in both modes.
 - No new test-stub infrastructure — dry-run tests assert a mutating stub
-  command is *absent* from `$MAC_UP_CALL_LOG` while the `[dry-run] would
+  command is *absent* from `$MACUP_CALL_LOG` while the `[dry-run] would
   ...` line is present in the captured output.
 - Every module's existing (non-dry-run) behavior, return-code semantics,
-  and log messages are unchanged when `MAC_UP_DRY_RUN` is unset/`0` —
+  and log messages are unchanged when `MACUP_DRY_RUN` is unset/`0` —
   every pre-existing test in the suite must keep passing untouched.
 
 ---
@@ -50,8 +50,8 @@ interactive prompts aren't "commands" a wrapper could intercept anyway.
 ## File Structure
 
 ```
-mac-up/
-├── bin/mac-up               # + --dry-run flag, MAC_UP_DRY_RUN, banner, summary line
+macup/
+├── bin/macup               # + --dry-run flag, MACUP_DRY_RUN, banner, summary line
 ├── lib/
 │   ├── common.sh              # + is_dry_run(), dry_run_report()
 │   ├── homebrew.sh            # dry-run guards (Task 2)
@@ -61,7 +61,7 @@ mac-up/
 │   └── github.sh                # dry-run guards (Task 5)
 └── tests/
     ├── common.bats               # + 3 tests (Task 1)
-    ├── mac_up.bats                # + 1 test (Task 1), + 1 test (Task 6)
+    ├── macup.bats                # + 1 test (Task 1), + 1 test (Task 6)
     ├── homebrew.bats               # + 3 tests (Task 2)
     ├── shell.bats                  # + 2 tests (Task 2)
     ├── dotfiles.bats                # + 6 tests (Task 3)
@@ -71,19 +71,19 @@ mac-up/
 
 ---
 
-### Task 1: `is_dry_run`/`dry_run_report` helpers + `bin/mac-up` wiring
+### Task 1: `is_dry_run`/`dry_run_report` helpers + `bin/macup` wiring
 
 **Files:**
 - Modify: `lib/common.sh`
-- Modify: `bin/mac-up`
+- Modify: `bin/macup`
 - Test: `tests/common.bats`
-- Test: `tests/mac_up.bats`
+- Test: `tests/macup.bats`
 
 **Interfaces:**
-- Produces: `is_dry_run()` → returns 0 (true) if `MAC_UP_DRY_RUN=1`, 1
+- Produces: `is_dry_run()` → returns 0 (true) if `MACUP_DRY_RUN=1`, 1
   (false) otherwise. `dry_run_report(description)` → logs `"[dry-run]
-  would $description"` via `log_info`. `MAC_UP_DRY_RUN` env var (`1` or
-  `0`), exported by `bin/mac-up`, consumed by [[Task 2]] through
+  would $description"` via `log_info`. `MACUP_DRY_RUN` env var (`1` or
+  `0`), exported by `bin/macup`, consumed by [[Task 2]] through
   [[Task 5]]'s module guards.
 
 - [ ] **Step 1: Write the failing tests for the helpers**
@@ -93,16 +93,16 @@ treats a pre-existing unwritable logs directory as a graceful-degradation
 case, not a crash`):
 
 ```bash
-@test "is_dry_run returns false when MAC_UP_DRY_RUN is unset" {
-  unset MAC_UP_DRY_RUN
+@test "is_dry_run returns false when MACUP_DRY_RUN is unset" {
+  unset MACUP_DRY_RUN
 
   run is_dry_run
 
   [ "$status" -eq 1 ]
 }
 
-@test "is_dry_run returns true when MAC_UP_DRY_RUN=1" {
-  export MAC_UP_DRY_RUN=1
+@test "is_dry_run returns true when MACUP_DRY_RUN=1" {
+  export MACUP_DRY_RUN=1
 
   run is_dry_run
 
@@ -128,7 +128,7 @@ Insert between the existing `log_error` function and `load_config`:
 
 ```bash
 is_dry_run() {
-  [ "${MAC_UP_DRY_RUN:-0}" = "1" ]
+  [ "${MACUP_DRY_RUN:-0}" = "1" ]
 }
 
 dry_run_report() {
@@ -141,14 +141,14 @@ dry_run_report() {
 Run: `bats tests/common.bats`
 Expected: PASS (19 tests: 16 existing + 3 new).
 
-- [ ] **Step 5: Write the failing `bin/mac-up` test**
+- [ ] **Step 5: Write the failing `bin/macup` test**
 
-Append to `tests/mac_up.bats` (after the last existing test, `mac-up
+Append to `tests/macup.bats` (after the last existing test, `macup
 creates a per-run log file and reports its path in the summary`):
 
 ```bash
-@test "mac-up --dry-run prints a startup banner and a summary note" {
-  run "$MAC_UP_BIN" --dry-run homebrew
+@test "macup --dry-run prints a startup banner and a summary note" {
+  run "$MACUP_BIN" --dry-run homebrew
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"Dry run: no changes will be made"* ]]
@@ -158,11 +158,11 @@ creates a per-run log file and reports its path in the summary`):
 
 - [ ] **Step 6: Run to verify it fails**
 
-Run: `bats tests/mac_up.bats`
+Run: `bats tests/macup.bats`
 Expected: FAIL — no `--dry-run` flag exists yet, so it's rejected as an
 unknown argument.
 
-- [ ] **Step 7: Wire `--dry-run` into `bin/mac-up`**
+- [ ] **Step 7: Wire `--dry-run` into `bin/macup`**
 
 In `usage()`, add the new option (after `--all`):
 
@@ -196,24 +196,24 @@ Add a `--dry-run` case to the flag-parsing loop (after the `--all` case):
         ;;
 ```
 
-After the existing `MAC_UP_NONINTERACTIVE` computation/export block (and
-before `load_config`), add the `MAC_UP_DRY_RUN` computation/export and
+After the existing `MACUP_NONINTERACTIVE` computation/export block (and
+before `load_config`), add the `MACUP_DRY_RUN` computation/export and
 the startup banner:
 
 ```bash
   if [ "$run_all" = true ] || [ "${#modules[@]}" -gt 0 ]; then
-    MAC_UP_NONINTERACTIVE=1
+    MACUP_NONINTERACTIVE=1
   else
-    MAC_UP_NONINTERACTIVE=0
+    MACUP_NONINTERACTIVE=0
   fi
-  export MAC_UP_NONINTERACTIVE
+  export MACUP_NONINTERACTIVE
 
   if [ "$dry_run" = true ]; then
-    MAC_UP_DRY_RUN=1
+    MACUP_DRY_RUN=1
   else
-    MAC_UP_DRY_RUN=0
+    MACUP_DRY_RUN=0
   fi
-  export MAC_UP_DRY_RUN
+  export MACUP_DRY_RUN
 
   if is_dry_run; then
     log_info "Dry run: no changes will be made"
@@ -223,7 +223,7 @@ the startup banner:
 ```
 
 In `run_selected_modules`, add the dry-run summary note (after the
-`succeeded`/`failed` lines, before the `MAC_UP_LOG_FILE` line):
+`succeeded`/`failed` lines, before the `MACUP_LOG_FILE` line):
 
 ```bash
   if [ "${#failed[@]}" -gt 0 ]; then
@@ -232,26 +232,26 @@ In `run_selected_modules`, add the dry-run summary note (after the
   if is_dry_run; then
     log_info "(dry run — nothing was actually changed)"
   fi
-  if [ -n "${MAC_UP_LOG_FILE:-}" ]; then
-    log_info "Full log: $MAC_UP_LOG_FILE"
+  if [ -n "${MACUP_LOG_FILE:-}" ]; then
+    log_info "Full log: $MACUP_LOG_FILE"
   fi
 ```
 
 - [ ] **Step 8: Run tests to verify they pass**
 
-Run: `bats tests/mac_up.bats`
+Run: `bats tests/macup.bats`
 Expected: PASS (9 tests: 8 existing + 1 new).
 
 - [ ] **Step 9: Run the full suite**
 
 Run: `bats tests/`
 Expected: PASS (73 tests: 69 existing + 3 (common.bats) + 1
-(mac_up.bats)).
+(macup.bats)).
 
 - [ ] **Step 10: Commit**
 
 ```bash
-git add lib/common.sh bin/mac-up tests/common.bats tests/mac_up.bats
+git add lib/common.sh bin/macup tests/common.bats tests/macup.bats
 git commit -m "feat: add dry-run helpers and CLI wiring"
 ```
 
@@ -277,7 +277,7 @@ warns and continues when EXTRA_BREWFILE is set but missing`):
 
 ```bash
 @test "run_homebrew reports it would install Homebrew in dry-run mode when brew is missing" {
-  export MAC_UP_DRY_RUN=1
+  export MACUP_DRY_RUN=1
 
   run run_homebrew
 
@@ -287,20 +287,20 @@ warns and continues when EXTRA_BREWFILE is set but missing`):
 
 @test "run_homebrew reports the default bundle in dry-run mode without calling brew" {
   install_stub_brew
-  export MAC_UP_DRY_RUN=1
+  export MACUP_DRY_RUN=1
 
   run run_homebrew
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"[dry-run] would run: brew bundle --file=$ROOT_DIR/Brewfile"* ]]
-  [ ! -s "$MAC_UP_CALL_LOG" ] || ! grep -q "brew" "$MAC_UP_CALL_LOG"
+  [ ! -s "$MACUP_CALL_LOG" ] || ! grep -q "brew" "$MACUP_CALL_LOG"
 }
 
 @test "run_homebrew reports the extra Brewfile bundle in dry-run mode without running it" {
   install_stub_brew
   echo "brew \"jq\"" > "$TEST_HOME/extra.Brewfile"
   export EXTRA_BREWFILE="$TEST_HOME/extra.Brewfile"
-  export MAC_UP_DRY_RUN=1
+  export MACUP_DRY_RUN=1
 
   run run_homebrew
 
@@ -312,7 +312,7 @@ warns and continues when EXTRA_BREWFILE is set but missing`):
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `bats tests/homebrew.bats`
-Expected: FAIL — `MAC_UP_DRY_RUN` has no effect yet, so the real
+Expected: FAIL — `MACUP_DRY_RUN` has no effect yet, so the real
 (stubbed) `brew` gets called and the dry-run messages never print.
 
 - [ ] **Step 3: Implement the guards in `lib/homebrew.sh`**
@@ -322,15 +322,15 @@ Replace the entire content of `lib/homebrew.sh` with:
 ```bash
 #!/usr/bin/env bash
 
-: "${MAC_UP_BREW_PATH_APPLE_SILICON:=/opt/homebrew/bin/brew}"
-: "${MAC_UP_BREW_PATH_INTEL:=/usr/local/bin/brew}"
+: "${MACUP_BREW_PATH_APPLE_SILICON:=/opt/homebrew/bin/brew}"
+: "${MACUP_BREW_PATH_INTEL:=/usr/local/bin/brew}"
 
 run_homebrew() {
   local brew_bin=""
-  if [ -x "$MAC_UP_BREW_PATH_APPLE_SILICON" ]; then
-    brew_bin="$MAC_UP_BREW_PATH_APPLE_SILICON"
-  elif [ -x "$MAC_UP_BREW_PATH_INTEL" ]; then
-    brew_bin="$MAC_UP_BREW_PATH_INTEL"
+  if [ -x "$MACUP_BREW_PATH_APPLE_SILICON" ]; then
+    brew_bin="$MACUP_BREW_PATH_APPLE_SILICON"
+  elif [ -x "$MACUP_BREW_PATH_INTEL" ]; then
+    brew_bin="$MACUP_BREW_PATH_INTEL"
   fi
 
   if [ -z "$brew_bin" ]; then
@@ -342,10 +342,10 @@ run_homebrew() {
         log_error "Homebrew installation failed"
         return 1
       fi
-      if [ -x "$MAC_UP_BREW_PATH_APPLE_SILICON" ]; then
-        brew_bin="$MAC_UP_BREW_PATH_APPLE_SILICON"
+      if [ -x "$MACUP_BREW_PATH_APPLE_SILICON" ]; then
+        brew_bin="$MACUP_BREW_PATH_APPLE_SILICON"
       else
-        brew_bin="$MAC_UP_BREW_PATH_INTEL"
+        brew_bin="$MACUP_BREW_PATH_INTEL"
       fi
     fi
   fi
@@ -391,7 +391,7 @@ clones powerlevel10k when oh-my-zsh exists but the theme doesn't`):
 
 ```bash
 @test "run_shell reports what it would do in dry-run mode without installing anything" {
-  export MAC_UP_DRY_RUN=1
+  export MACUP_DRY_RUN=1
 
   run run_shell
 
@@ -403,7 +403,7 @@ clones powerlevel10k when oh-my-zsh exists but the theme doesn't`):
 
 @test "run_shell reports the Powerlevel10k clone in dry-run mode when Oh My Zsh already exists" {
   mkdir -p "$HOME/.oh-my-zsh"
-  export MAC_UP_DRY_RUN=1
+  export MACUP_DRY_RUN=1
 
   run run_shell
 
@@ -506,7 +506,7 @@ does not touch git identity when DOTFILES_REPO is set`):
 
 ```bash
 @test "run_dotfiles reports fresh links in dry-run mode without creating them" {
-  export MAC_UP_DRY_RUN=1
+  export MACUP_DRY_RUN=1
 
   run run_dotfiles
 
@@ -518,41 +518,41 @@ does not touch git identity when DOTFILES_REPO is set`):
 
 @test "run_dotfiles reports the confirm-and-backup prompt in dry-run mode without prompting or mutating" {
   echo "my custom zshrc" > "$HOME/.zshrc"
-  export MAC_UP_DRY_RUN=1
+  export MACUP_DRY_RUN=1
 
   run run_dotfiles
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"[dry-run] would prompt to back up and replace $HOME/.zshrc"* ]]
   [ "$(cat "$HOME/.zshrc")" = "my custom zshrc" ]
-  ! grep -q "gum confirm" "$MAC_UP_CALL_LOG"
+  ! grep -q "gum confirm" "$MACUP_CALL_LOG"
 }
 
 @test "run_dotfiles reports the DOTFILES_REPO clone in dry-run mode without cloning" {
   export DOTFILES_REPO="git@github.com:example/dotfiles.git"
-  export MAC_UP_DRY_RUN=1
+  export MACUP_DRY_RUN=1
 
   run run_dotfiles
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"[dry-run] would clone dotfiles repo git@github.com:example/dotfiles.git"* ]]
-  [ ! -d "$HOME/.cache/mac-up/dotfiles-repo" ]
+  [ ! -d "$HOME/.cache/macup/dotfiles-repo" ]
 }
 
 @test "run_dotfiles reports the DOTFILES_REPO pull in dry-run mode without pulling" {
   export DOTFILES_REPO="git@github.com:example/dotfiles.git"
-  mkdir -p "$HOME/.cache/mac-up/dotfiles-repo/.git"
-  export MAC_UP_DRY_RUN=1
+  mkdir -p "$HOME/.cache/macup/dotfiles-repo/.git"
+  export MACUP_DRY_RUN=1
 
   run run_dotfiles
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"[dry-run] would update the dotfiles repo cache"* ]]
-  ! grep -q "pull" "$MAC_UP_CALL_LOG"
+  ! grep -q "pull" "$MACUP_CALL_LOG"
 }
 
 @test "run_dotfiles reports the git identity prompt in dry-run mode without prompting or writing" {
-  export MAC_UP_DRY_RUN=1
+  export MACUP_DRY_RUN=1
 
   run run_dotfiles
 
@@ -564,7 +564,7 @@ does not touch git identity when DOTFILES_REPO is set`):
 @test "run_dotfiles still reports already-configured git identity in dry-run mode" {
   git config -f "$HOME/.gitconfig.local" user.name "Existing Name"
   git config -f "$HOME/.gitconfig.local" user.email "existing@example.com"
-  export MAC_UP_DRY_RUN=1
+  export MACUP_DRY_RUN=1
 
   run run_dotfiles
 
@@ -589,7 +589,7 @@ run_dotfiles() {
   local source_dir
 
   if [ -n "${DOTFILES_REPO:-}" ]; then
-    local cache_dir="$HOME/.cache/mac-up/dotfiles-repo"
+    local cache_dir="$HOME/.cache/macup/dotfiles-repo"
     if [ -d "$cache_dir/.git" ]; then
       if is_dry_run; then
         dry_run_report "update the dotfiles repo cache at $cache_dir"
@@ -648,11 +648,11 @@ run_dotfiles() {
     fi
 
     if ui_confirm "$target already exists. Back it up and replace with symlink?"; then
-      if [ -e "$target.mac-up-backup" ] || [ -L "$target.mac-up-backup" ]; then
-        log_warn "Skipped $target: backup $target.mac-up-backup already exists"
+      if [ -e "$target.macup-backup" ] || [ -L "$target.macup-backup" ]; then
+        log_warn "Skipped $target: backup $target.macup-backup already exists"
         continue
       fi
-      if ! mv "$target" "$target.mac-up-backup"; then
+      if ! mv "$target" "$target.macup-backup"; then
         log_error "Failed to back up $target, skipping"
         continue
       fi
@@ -734,17 +734,17 @@ Append to `tests/macos_defaults.bats` (after the last existing test,
 
 ```bash
 @test "run_macos_defaults reports settings in dry-run mode without writing them" {
-  export MAC_UP_DRY_RUN=1
+  export MACUP_DRY_RUN=1
 
   run run_macos_defaults
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"[dry-run] would set com.apple.finder AppleShowAllExtensions = true"* ]]
-  ! grep -q "defaults write" "$MAC_UP_CALL_LOG"
+  ! grep -q "defaults write" "$MACUP_CALL_LOG"
 }
 
 @test "run_macos_defaults reports the Screenshots directory creation in dry-run mode without creating it" {
-  export MAC_UP_DRY_RUN=1
+  export MACUP_DRY_RUN=1
 
   run run_macos_defaults
 
@@ -754,18 +754,18 @@ Append to `tests/macos_defaults.bats` (after the last existing test,
 }
 
 @test "run_macos_defaults reports the Finder/SystemUIServer restart in dry-run mode without restarting" {
-  export MAC_UP_DRY_RUN=1
+  export MACUP_DRY_RUN=1
 
   run run_macos_defaults
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"[dry-run] would restart Finder and SystemUIServer"* ]]
-  ! grep -q "killall" "$MAC_UP_CALL_LOG"
+  ! grep -q "killall" "$MACUP_CALL_LOG"
 }
 
 @test "run_macos_defaults still skips an already-applied setting in dry-run mode" {
   echo "com.apple.finder|AppleShowAllExtensions|1" > "$DEFAULTS_STORE"
-  export MAC_UP_DRY_RUN=1
+  export MACUP_DRY_RUN=1
 
   run run_macos_defaults
 
@@ -892,7 +892,7 @@ warns but does not fail when SSH key upload fails`):
 
 ```bash
 @test "run_github reports SSH key generation in dry-run mode without generating a key" {
-  export MAC_UP_DRY_RUN=1
+  export MACUP_DRY_RUN=1
 
   run run_github
 
@@ -906,15 +906,15 @@ warns but does not fail when SSH key upload fails`):
   echo "existing-key" > "$HOME/.ssh/id_ed25519"
   echo "ssh-ed25519 AAAAtest existing@example.com" > "$HOME/.ssh/id_ed25519.pub"
   export GH_AUTH_STATUS_EXIT=1
-  export MAC_UP_DRY_RUN=1
+  export MACUP_DRY_RUN=1
 
   run run_github
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"[dry-run] would authenticate via a GitHub PAT, then check/register the SSH key with GitHub"* ]]
-  ! grep -q "auth login" "$MAC_UP_CALL_LOG"
-  ! grep -q "api user/keys" "$MAC_UP_CALL_LOG"
-  ! grep -q "ssh-key add" "$MAC_UP_CALL_LOG"
+  ! grep -q "auth login" "$MACUP_CALL_LOG"
+  ! grep -q "api user/keys" "$MACUP_CALL_LOG"
+  ! grep -q "ssh-key add" "$MACUP_CALL_LOG"
 }
 
 @test "run_github reports the ssh-key upload in dry-run mode when already authenticated but not registered" {
@@ -923,13 +923,13 @@ warns but does not fail when SSH key upload fails`):
   echo "ssh-ed25519 AAAAtest existing@example.com" > "$HOME/.ssh/id_ed25519.pub"
   export GH_AUTH_STATUS_EXIT=0
   export GH_REGISTERED_KEYS=""
-  export MAC_UP_DRY_RUN=1
+  export MACUP_DRY_RUN=1
 
   run run_github
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"[dry-run] would upload the SSH key to GitHub via gh ssh-key add"* ]]
-  ! grep -q "ssh-key add" "$MAC_UP_CALL_LOG"
+  ! grep -q "ssh-key add" "$MACUP_CALL_LOG"
 }
 
 @test "run_github still reports an already-registered key in dry-run mode" {
@@ -938,7 +938,7 @@ warns but does not fail when SSH key upload fails`):
   echo "ssh-ed25519 AAAAtest existing@example.com" > "$HOME/.ssh/id_ed25519.pub"
   export GH_AUTH_STATUS_EXIT=0
   export GH_REGISTERED_KEYS="AAAAtest"
-  export MAC_UP_DRY_RUN=1
+  export MACUP_DRY_RUN=1
 
   run run_github
 
@@ -1021,7 +1021,7 @@ run_github() {
     elif is_dry_run; then
       dry_run_report "upload the SSH key to GitHub via gh ssh-key add"
     else
-      if ! gh ssh-key add "$key_path.pub" --title "mac-up ($(scutil --get ComputerName 2>/dev/null || hostname))"; then
+      if ! gh ssh-key add "$key_path.pub" --title "macup ($(scutil --get ComputerName 2>/dev/null || hostname))"; then
         log_warn "Failed to auto-register SSH key with GitHub — add it manually at https://github.com/settings/keys using the public key printed above"
       fi
     fi
@@ -1053,7 +1053,7 @@ git commit -m "feat: add dry-run guards to github module"
 ### Task 6: End-to-end dry-run integration test
 
 **Files:**
-- Test: `tests/mac_up.bats`
+- Test: `tests/macup.bats`
 
 **Interfaces:**
 - Consumes: everything from [[Task 1]] through [[Task 5]] — this task
@@ -1061,29 +1061,29 @@ git commit -m "feat: add dry-run guards to github module"
 
 - [ ] **Step 1: Write the test**
 
-Append to `tests/mac_up.bats` (after the last existing test, `mac-up
+Append to `tests/macup.bats` (after the last existing test, `macup
 --dry-run prints a startup banner and a summary note`):
 
 ```bash
-@test "mac-up --dry-run --all reports intended actions across every module without calling any mutating stub" {
+@test "macup --dry-run --all reports intended actions across every module without calling any mutating stub" {
   mkdir -p "$HOME/.oh-my-zsh/custom/themes/powerlevel10k"
 
-  run "$MAC_UP_BIN" --dry-run --all
+  run "$MACUP_BIN" --dry-run --all
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"Dry run: no changes will be made"* ]]
   [[ "$output" == *"[dry-run] would run: brew bundle"* ]]
   [[ "$output" == *"(dry run — nothing was actually changed)"* ]]
-  ! grep -q "^brew " "$MAC_UP_CALL_LOG"
-  ! grep -q "ssh-keygen" "$MAC_UP_CALL_LOG"
-  ! grep -q "defaults write" "$MAC_UP_CALL_LOG"
-  ! grep -q "killall" "$MAC_UP_CALL_LOG"
+  ! grep -q "^brew " "$MACUP_CALL_LOG"
+  ! grep -q "ssh-keygen" "$MACUP_CALL_LOG"
+  ! grep -q "defaults write" "$MACUP_CALL_LOG"
+  ! grep -q "killall" "$MACUP_CALL_LOG"
 }
 ```
 
 - [ ] **Step 2: Run to verify it fails**
 
-Run: `bats tests/mac_up.bats`
+Run: `bats tests/macup.bats`
 Expected: FAIL if any task 1-5 guard was missed or misapplied — this
 test is the cross-module safety net. If Tasks 1-5 were all implemented
 correctly, this may already pass on the first run; if so, treat that as
@@ -1092,7 +1092,7 @@ run it once and confirm PASS).
 
 - [ ] **Step 3: Run tests to verify it passes**
 
-Run: `bats tests/mac_up.bats`
+Run: `bats tests/macup.bats`
 Expected: PASS (10 tests: 9 existing + 1 new).
 
 - [ ] **Step 4: Run the full suite**
@@ -1103,7 +1103,7 @@ Expected: PASS (93 tests: 92 + 1).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add tests/mac_up.bats
+git add tests/macup.bats
 git commit -m "test: add end-to-end dry-run integration test"
 ```
 
@@ -1111,18 +1111,18 @@ git commit -m "test: add end-to-end dry-run integration test"
 
 ## Self-Review Notes
 
-- **Spec coverage:** `lib/common.sh` helpers + `bin/mac-up` wiring →
+- **Spec coverage:** `lib/common.sh` helpers + `bin/macup` wiring →
   Task 1. Per-module treatment (homebrew, shell, dotfiles,
   macos-defaults, github) → Tasks 2-5, each matching the spec's exact
   per-module description including the curl-piped-installer guard
   placement, the confirm/prompt-skipping behavior, the
   `_defaults_apply`/`killall`/`mkdir` wrap points, and the github
   auth/registration coupling. Testing approach (no new stubs, presence/
-  absence assertions against `$MAC_UP_CALL_LOG`) → every task's tests,
+  absence assertions against `$MACUP_CALL_LOG`) → every task's tests,
   plus Task 6's cross-module check.
 - **Placeholder scan:** no TODOs; every step has complete, runnable code
   and an expected result.
 - **Type/name consistency:** `is_dry_run`, `dry_run_report`,
-  `MAC_UP_DRY_RUN` are used identically across every task and test that
+  `MACUP_DRY_RUN` are used identically across every task and test that
   references them. Dry-run report message wording matches between each
   module's implementation and its corresponding test assertions exactly.

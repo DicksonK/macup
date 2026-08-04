@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-echo "gum $*" >> "${MAC_UP_CALL_LOG:-/dev/null}"
+echo "gum $*" >> "${MACUP_CALL_LOG:-/dev/null}"
 case "$1" in
   choose)
     printf '%s\n' "${GUM_CHOOSE_RESULT:-}"

@@ -1,7 +1,7 @@
-class MacUp < Formula
+class Macup < Formula
   desc "Bootstrap and keep a Mac dev environment in sync"
-  homepage "https://github.com/dicksonk/mac-up"
-  url "https://github.com/dicksonk/mac-up/archive/refs/tags/v0.1.0.tar.gz"
+  homepage "https://github.com/dicksonk/macup"
+  url "https://github.com/dicksonk/macup/archive/refs/tags/v0.1.0.tar.gz"
   sha256 "REPLACE_WITH_RELEASE_TARBALL_SHA256"
   license "MIT"
 
@@ -11,10 +11,10 @@ class MacUp < Formula
 
   def install
     libexec.install Dir["*"]
-    bin.install_symlink libexec/"bin/mac-up"
+    bin.install_symlink libexec/"bin/macup"
   end
 
   test do
-    system "#{bin}/mac-up", "--help"
+    system "#{bin}/macup", "--help"
   end
 end

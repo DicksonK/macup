@@ -2,13 +2,13 @@
 
 setup() {
   load 'test_helper/load'
-  mac_up_test_setup
+  macup_test_setup
   source "$ROOT_DIR/lib/common.sh"
   source "$ROOT_DIR/lib/menu.sh"
 }
 
 teardown() {
-  mac_up_test_teardown
+  macup_test_teardown
 }
 
 @test "resolve_script_dir follows a chain of symlinks to the real directory" {
@@ -64,8 +64,8 @@ teardown() {
 }
 
 @test "load_config sources an existing config file" {
-  mkdir -p "$TEST_HOME/.config/mac-up"
-  cat > "$TEST_HOME/.config/mac-up/config" <<'EOF'
+  mkdir -p "$TEST_HOME/.config/macup"
+  cat > "$TEST_HOME/.config/macup/config" <<'EOF'
 DOTFILES_REPO=git@github.com:example/dotfiles.git
 EXTRA_BREWFILE=/tmp/extra.Brewfile
 EOF
@@ -83,7 +83,7 @@ EOF
 
   [ "$DOTFILES_REPO" = "" ]
   [ "$EXTRA_BREWFILE" = "" ]
-  [ ! -f "$TEST_HOME/.config/mac-up/config" ]
+  [ ! -f "$TEST_HOME/.config/macup/config" ]
 }
 
 @test "load_config creates the config file from the example when confirmed" {
@@ -91,50 +91,50 @@ EOF
 
   load_config
 
-  [ -f "$TEST_HOME/.config/mac-up/config" ]
-  diff "$TEST_HOME/.config/mac-up/config" "$ROOT_DIR/mac-up.conf.example"
+  [ -f "$TEST_HOME/.config/macup/config" ]
+  diff "$TEST_HOME/.config/macup/config" "$ROOT_DIR/macup.conf.example"
 }
 
-@test "load_config skips the create-config prompt when MAC_UP_NONINTERACTIVE is set" {
-  export MAC_UP_NONINTERACTIVE=1
+@test "load_config skips the create-config prompt when MACUP_NONINTERACTIVE is set" {
+  export MACUP_NONINTERACTIVE=1
   export GUM_CONFIRM_EXIT=1
 
   load_config
 
   [ "$DOTFILES_REPO" = "" ]
   [ "$EXTRA_BREWFILE" = "" ]
-  [ ! -f "$TEST_HOME/.config/mac-up/config" ]
-  ! grep -q "gum confirm" "$MAC_UP_CALL_LOG"
+  [ ! -f "$TEST_HOME/.config/macup/config" ]
+  ! grep -q "gum confirm" "$MACUP_CALL_LOG"
 }
 
-@test "init_log_file creates the logs directory and sets MAC_UP_LOG_FILE" {
+@test "init_log_file creates the logs directory and sets MACUP_LOG_FILE" {
   init_log_file
 
-  [ -d "$TEST_HOME/.cache/mac-up/logs" ]
-  [[ "$MAC_UP_LOG_FILE" == "$TEST_HOME/.cache/mac-up/logs/"*".log" ]]
+  [ -d "$TEST_HOME/.cache/macup/logs" ]
+  [[ "$MACUP_LOG_FILE" == "$TEST_HOME/.cache/macup/logs/"*".log" ]]
 }
 
-@test "log_info appends a plain-text line to MAC_UP_LOG_FILE with no ANSI escape codes" {
+@test "log_info appends a plain-text line to MACUP_LOG_FILE with no ANSI escape codes" {
   init_log_file
 
   log_info "hello there" >/dev/null
 
-  grep -q "\[INFO\] hello there" "$MAC_UP_LOG_FILE"
-  ! grep -q $'\033' "$MAC_UP_LOG_FILE"
+  grep -q "\[INFO\] hello there" "$MACUP_LOG_FILE"
+  ! grep -q $'\033' "$MACUP_LOG_FILE"
 }
 
-@test "log_warn and log_error append to MAC_UP_LOG_FILE" {
+@test "log_warn and log_error append to MACUP_LOG_FILE" {
   init_log_file
 
   log_warn "careful now" 2>/dev/null
   log_error "bad thing happened" 2>/dev/null
 
-  grep -q "\[WARN\] careful now" "$MAC_UP_LOG_FILE"
-  grep -q "\[ERROR\] bad thing happened" "$MAC_UP_LOG_FILE"
+  grep -q "\[WARN\] careful now" "$MACUP_LOG_FILE"
+  grep -q "\[ERROR\] bad thing happened" "$MACUP_LOG_FILE"
 }
 
-@test "log_info does not fail when MAC_UP_LOG_FILE is unset" {
-  unset MAC_UP_LOG_FILE
+@test "log_info does not fail when MACUP_LOG_FILE is unset" {
+  unset MACUP_LOG_FILE
 
   run log_info "no file yet"
 
@@ -153,7 +153,7 @@ EOF
 
   chmod 755 "$TEST_HOME/.cache"
 
-  [ "$MAC_UP_LOG_FILE" = "" ]
+  [ "$MACUP_LOG_FILE" = "" ]
 }
 
 @test "log_info does not abort the script when a post-init log write fails" {
@@ -161,14 +161,14 @@ EOF
     skip "chmod-based permission test doesn't work as root"
   fi
   init_log_file
-  touch "$MAC_UP_LOG_FILE"
-  chmod 444 "$MAC_UP_LOG_FILE"
-  chmod 555 "$(dirname "$MAC_UP_LOG_FILE")"
+  touch "$MACUP_LOG_FILE"
+  chmod 444 "$MACUP_LOG_FILE"
+  chmod 555 "$(dirname "$MACUP_LOG_FILE")"
 
-  run bash -c "set -euo pipefail; source '$ROOT_DIR/lib/common.sh'; MAC_UP_LOG_FILE='$MAC_UP_LOG_FILE'; log_info 'should not abort'"
+  run bash -c "set -euo pipefail; source '$ROOT_DIR/lib/common.sh'; MACUP_LOG_FILE='$MACUP_LOG_FILE'; log_info 'should not abort'"
 
-  chmod 755 "$(dirname "$MAC_UP_LOG_FILE")"
-  chmod 644 "$MAC_UP_LOG_FILE"
+  chmod 755 "$(dirname "$MACUP_LOG_FILE")"
+  chmod 644 "$MACUP_LOG_FILE"
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"should not abort"* ]]
@@ -179,26 +179,26 @@ EOF
   if [ "$(id -u)" = "0" ]; then
     skip "chmod-based permission test doesn't work as root"
   fi
-  mkdir -p "$TEST_HOME/.cache/mac-up/logs"
-  chmod 555 "$TEST_HOME/.cache/mac-up/logs"
+  mkdir -p "$TEST_HOME/.cache/macup/logs"
+  chmod 555 "$TEST_HOME/.cache/macup/logs"
 
   init_log_file
 
-  chmod 755 "$TEST_HOME/.cache/mac-up/logs"
+  chmod 755 "$TEST_HOME/.cache/macup/logs"
 
-  [ "$MAC_UP_LOG_FILE" = "" ]
+  [ "$MACUP_LOG_FILE" = "" ]
 }
 
-@test "is_dry_run returns false when MAC_UP_DRY_RUN is unset" {
-  unset MAC_UP_DRY_RUN
+@test "is_dry_run returns false when MACUP_DRY_RUN is unset" {
+  unset MACUP_DRY_RUN
 
   run is_dry_run
 
   [ "$status" -eq 1 ]
 }
 
-@test "is_dry_run returns true when MAC_UP_DRY_RUN=1" {
-  export MAC_UP_DRY_RUN=1
+@test "is_dry_run returns true when MACUP_DRY_RUN=1" {
+  export MACUP_DRY_RUN=1
 
   run is_dry_run
 
@@ -213,13 +213,13 @@ EOF
 }
 
 @test "load_config skips the create-config prompt in dry-run mode without prompting or writing" {
-  export MAC_UP_DRY_RUN=1
+  export MACUP_DRY_RUN=1
   export GUM_CONFIRM_EXIT=0
 
   load_config
 
-  [ ! -f "$TEST_HOME/.config/mac-up/config" ]
-  ! grep -q "gum confirm" "$MAC_UP_CALL_LOG"
+  [ ! -f "$TEST_HOME/.config/macup/config" ]
+  ! grep -q "gum confirm" "$MACUP_CALL_LOG"
 }
 
 @test "_redact_secrets masks user:pass@ credentials in an https URL" {

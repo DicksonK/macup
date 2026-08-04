@@ -12,21 +12,21 @@ resolve_script_dir() {
 }
 
 init_log_file() {
-  local log_dir="$HOME/.cache/mac-up/logs" candidate
+  local log_dir="$HOME/.cache/macup/logs" candidate
   if mkdir -p "$log_dir" 2>/dev/null; then
     candidate="$log_dir/$(date +%Y-%m-%dT%H%M%S).log"
     if : 2>/dev/null >> "$candidate"; then
-      MAC_UP_LOG_FILE="$candidate"
+      MACUP_LOG_FILE="$candidate"
       return 0
     fi
   fi
-  MAC_UP_LOG_FILE=""
+  MACUP_LOG_FILE=""
 }
 
 _log_write() {
   local level="$1" msg="$2"
-  if [ -n "${MAC_UP_LOG_FILE:-}" ]; then
-    printf '[%s] [%s] %s\n' "$(date +%Y-%m-%dT%H:%M:%S)" "$level" "$msg" 2>/dev/null >> "$MAC_UP_LOG_FILE" || true
+  if [ -n "${MACUP_LOG_FILE:-}" ]; then
+    printf '[%s] [%s] %s\n' "$(date +%Y-%m-%dT%H:%M:%S)" "$level" "$msg" 2>/dev/null >> "$MACUP_LOG_FILE" || true
   fi
 }
 
@@ -46,7 +46,7 @@ log_error() {
 }
 
 is_dry_run() {
-  [ "${MAC_UP_DRY_RUN:-0}" = "1" ]
+  [ "${MACUP_DRY_RUN:-0}" = "1" ]
 }
 
 _redact_secrets() {
@@ -58,15 +58,15 @@ dry_run_report() {
 }
 
 load_config() {
-  local config_dir="$HOME/.config/mac-up"
+  local config_dir="$HOME/.config/macup"
   local config_file="$config_dir/config"
-  local example_file="$ROOT_DIR/mac-up.conf.example"
+  local example_file="$ROOT_DIR/macup.conf.example"
 
   DOTFILES_REPO="${DOTFILES_REPO:-}"
   EXTRA_BREWFILE="${EXTRA_BREWFILE:-}"
 
   if [ ! -f "$config_file" ]; then
-    if [ "${MAC_UP_NONINTERACTIVE:-0}" = "1" ]; then
+    if [ "${MACUP_NONINTERACTIVE:-0}" = "1" ]; then
       return 0
     fi
     if is_dry_run; then

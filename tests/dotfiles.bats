@@ -2,14 +2,14 @@
 
 setup() {
   load 'test_helper/load'
-  mac_up_test_setup
+  macup_test_setup
   source "$ROOT_DIR/lib/common.sh"
   source "$ROOT_DIR/lib/menu.sh"
   source "$ROOT_DIR/lib/dotfiles.sh"
 }
 
 teardown() {
-  mac_up_test_teardown
+  macup_test_teardown
 }
 
 @test "run_dotfiles symlinks bundled dotfiles into HOME when targets don't exist" {
@@ -36,22 +36,22 @@ teardown() {
   run run_dotfiles
 
   [ "$status" -eq 0 ]
-  [ -f "$HOME/.zshrc.mac-up-backup" ]
-  [ "$(cat "$HOME/.zshrc.mac-up-backup")" = "my custom zshrc" ]
+  [ -f "$HOME/.zshrc.macup-backup" ]
+  [ "$(cat "$HOME/.zshrc.macup-backup")" = "my custom zshrc" ]
   [ -L "$HOME/.zshrc" ]
 }
 
 @test "run_dotfiles skips overwrite when a backup file already exists" {
   echo "my custom zshrc" > "$HOME/.zshrc"
-  echo "previous backup contents" > "$HOME/.zshrc.mac-up-backup"
+  echo "previous backup contents" > "$HOME/.zshrc.macup-backup"
   export GUM_CONFIRM_EXIT=0
 
   run run_dotfiles
 
   [ "$status" -eq 0 ]
-  [ "$(cat "$HOME/.zshrc.mac-up-backup")" = "previous backup contents" ]
+  [ "$(cat "$HOME/.zshrc.macup-backup")" = "previous backup contents" ]
   [ "$(cat "$HOME/.zshrc")" = "my custom zshrc" ]
-  [[ "$output" == *"backup $HOME/.zshrc.mac-up-backup already exists"* ]]
+  [[ "$output" == *"backup $HOME/.zshrc.macup-backup already exists"* ]]
 }
 
 @test "run_dotfiles logs an error and continues when the backup mv fails" {
@@ -102,7 +102,7 @@ teardown() {
   run run_dotfiles
 
   [ "$status" -eq 0 ]
-  grep -q "clone git@github.com:example/dotfiles.git $HOME/.cache/mac-up/dotfiles-repo" "$MAC_UP_CALL_LOG"
+  grep -q "clone git@github.com:example/dotfiles.git $HOME/.cache/macup/dotfiles-repo" "$MACUP_CALL_LOG"
 }
 
 @test "run_dotfiles warns when zero dotfiles were linked from a non-empty source_dir" {
@@ -183,7 +183,7 @@ teardown() {
 }
 
 @test "run_dotfiles reports fresh links in dry-run mode without creating them" {
-  export MAC_UP_DRY_RUN=1
+  export MACUP_DRY_RUN=1
 
   run run_dotfiles
 
@@ -195,41 +195,41 @@ teardown() {
 
 @test "run_dotfiles reports the confirm-and-backup prompt in dry-run mode without prompting or mutating" {
   echo "my custom zshrc" > "$HOME/.zshrc"
-  export MAC_UP_DRY_RUN=1
+  export MACUP_DRY_RUN=1
 
   run run_dotfiles
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"[dry-run] would prompt to back up and replace $HOME/.zshrc"* ]]
   [ "$(cat "$HOME/.zshrc")" = "my custom zshrc" ]
-  ! grep -q "gum confirm" "$MAC_UP_CALL_LOG"
+  ! grep -q "gum confirm" "$MACUP_CALL_LOG"
 }
 
 @test "run_dotfiles reports the DOTFILES_REPO clone in dry-run mode without cloning" {
   export DOTFILES_REPO="git@github.com:example/dotfiles.git"
-  export MAC_UP_DRY_RUN=1
+  export MACUP_DRY_RUN=1
 
   run run_dotfiles
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"[dry-run] would clone dotfiles repo git@github.com:example/dotfiles.git"* ]]
-  [ ! -d "$HOME/.cache/mac-up/dotfiles-repo" ]
+  [ ! -d "$HOME/.cache/macup/dotfiles-repo" ]
 }
 
 @test "run_dotfiles reports the DOTFILES_REPO pull in dry-run mode without pulling" {
   export DOTFILES_REPO="git@github.com:example/dotfiles.git"
-  mkdir -p "$HOME/.cache/mac-up/dotfiles-repo/.git"
-  export MAC_UP_DRY_RUN=1
+  mkdir -p "$HOME/.cache/macup/dotfiles-repo/.git"
+  export MACUP_DRY_RUN=1
 
   run run_dotfiles
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"[dry-run] would update the dotfiles repo cache"* ]]
-  ! grep -q "pull" "$MAC_UP_CALL_LOG"
+  ! grep -q "pull" "$MACUP_CALL_LOG"
 }
 
 @test "run_dotfiles reports the git identity prompt in dry-run mode without prompting or writing" {
-  export MAC_UP_DRY_RUN=1
+  export MACUP_DRY_RUN=1
 
   run run_dotfiles
 
@@ -241,7 +241,7 @@ teardown() {
 @test "run_dotfiles still reports already-configured git identity in dry-run mode" {
   git config -f "$HOME/.gitconfig.local" user.name "Existing Name"
   git config -f "$HOME/.gitconfig.local" user.email "existing@example.com"
-  export MAC_UP_DRY_RUN=1
+  export MACUP_DRY_RUN=1
 
   run run_dotfiles
 
@@ -251,13 +251,13 @@ teardown() {
 
 @test "run_dotfiles reports the existing backup in dry-run mode instead of a bogus overwrite prompt" {
   echo "my custom zshrc" > "$HOME/.zshrc"
-  echo "previous backup contents" > "$HOME/.zshrc.mac-up-backup"
-  export MAC_UP_DRY_RUN=1
+  echo "previous backup contents" > "$HOME/.zshrc.macup-backup"
+  export MACUP_DRY_RUN=1
 
   run run_dotfiles
 
   [ "$status" -eq 0 ]
-  [[ "$output" == *"backup $HOME/.zshrc.mac-up-backup already exists"* ]]
+  [[ "$output" == *"backup $HOME/.zshrc.macup-backup already exists"* ]]
   [[ "$output" != *"would prompt to back up and replace $HOME/.zshrc"* ]]
 }
 
@@ -284,7 +284,7 @@ teardown() {
 
 @test "run_dotfiles redacts embedded credentials from DOTFILES_REPO when reporting a dry-run clone" {
   export DOTFILES_REPO="https://oauth2:ghp_secrettoken@github.com/example/dotfiles.git"
-  export MAC_UP_DRY_RUN=1
+  export MACUP_DRY_RUN=1
 
   run run_dotfiles
 

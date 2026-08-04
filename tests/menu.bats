@@ -2,12 +2,12 @@
 
 setup() {
   load 'test_helper/load'
-  mac_up_test_setup
+  macup_test_setup
   source "$ROOT_DIR/lib/menu.sh"
 }
 
 teardown() {
-  mac_up_test_teardown
+  macup_test_teardown
 }
 
 @test "ui_choose_modules strips descriptions and returns module names" {
@@ -55,7 +55,7 @@ dotfiles: Symlink dotfiles into \$HOME"
 @test "ui_input_secret passes --password to gum input" {
   run ui_input_secret "GitHub Personal Access Token"
   [ "$status" -eq 0 ]
-  grep -q -- "--password" "$MAC_UP_CALL_LOG"
+  grep -q -- "--password" "$MACUP_CALL_LOG"
 }
 
 @test "ui_spin runs the wrapped command and forwards its exit status" {

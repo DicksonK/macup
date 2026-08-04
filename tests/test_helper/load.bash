@@ -4,7 +4,7 @@ repo_root() {
   cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd
 }
 
-mac_up_test_setup() {
+macup_test_setup() {
   ROOT_DIR="$(repo_root)"
   export ROOT_DIR
   TEST_HOME="$(mktemp -d)"
@@ -12,11 +12,11 @@ mac_up_test_setup() {
   TEST_HOME="$(cd -P "$TEST_HOME" && pwd)"
   export HOME="$TEST_HOME"
   export PATH="$ROOT_DIR/tests/test_helper/stubs:$PATH"
-  MAC_UP_CALL_LOG="$(mktemp)"
-  export MAC_UP_CALL_LOG
+  MACUP_CALL_LOG="$(mktemp)"
+  export MACUP_CALL_LOG
 }
 
-mac_up_test_teardown() {
+macup_test_teardown() {
   rm -rf "$TEST_HOME"
-  rm -f "$MAC_UP_CALL_LOG"
+  rm -f "$MACUP_CALL_LOG"
 }

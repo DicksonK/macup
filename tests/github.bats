@@ -2,14 +2,14 @@
 
 setup() {
   load 'test_helper/load'
-  mac_up_test_setup
+  macup_test_setup
   source "$ROOT_DIR/lib/common.sh"
   source "$ROOT_DIR/lib/menu.sh"
   source "$ROOT_DIR/lib/github.sh"
 }
 
 teardown() {
-  mac_up_test_teardown
+  macup_test_teardown
 }
 
 @test "run_github generates an SSH key when none exists" {
@@ -21,7 +21,7 @@ teardown() {
   [ "$status" -eq 0 ]
   [ -f "$HOME/.ssh/id_ed25519" ]
   [ -f "$HOME/.ssh/id_ed25519.pub" ]
-  grep -q "ssh-keygen" "$MAC_UP_CALL_LOG"
+  grep -q "ssh-keygen" "$MACUP_CALL_LOG"
 }
 
 @test "run_github skips key generation when a key already exists" {
@@ -34,7 +34,7 @@ teardown() {
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"SSH key already exists"* ]]
-  ! grep -q "ssh-keygen" "$MAC_UP_CALL_LOG"
+  ! grep -q "ssh-keygen" "$MACUP_CALL_LOG"
 }
 
 @test "run_github logs in with gh when not already authenticated" {
@@ -48,7 +48,7 @@ teardown() {
   run run_github
 
   [ "$status" -eq 0 ]
-  grep -q "auth login --with-token" "$MAC_UP_CALL_LOG"
+  grep -q "auth login --with-token" "$MACUP_CALL_LOG"
   [[ "$output" == *"github.com/settings/tokens"* ]]
   [[ "$output" == *"admin:public_key"* ]]
 }
@@ -63,7 +63,7 @@ teardown() {
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"gh already authenticated, skipping"* ]]
-  ! grep -q "auth login" "$MAC_UP_CALL_LOG"
+  ! grep -q "auth login" "$MACUP_CALL_LOG"
 }
 
 @test "run_github fails with a clear error when no token is provided" {
@@ -85,7 +85,7 @@ teardown() {
   run run_github
 
   [ "$status" -eq 0 ]
-  grep -q "ssh-keygen.*-C identity@example.com" "$MAC_UP_CALL_LOG"
+  grep -q "ssh-keygen.*-C identity@example.com" "$MACUP_CALL_LOG"
 }
 
 @test "run_github auto-uploads the SSH key when not yet registered with GitHub" {
@@ -98,7 +98,7 @@ teardown() {
   run run_github
 
   [ "$status" -eq 0 ]
-  grep -q "ssh-key add" "$MAC_UP_CALL_LOG"
+  grep -q "ssh-key add" "$MACUP_CALL_LOG"
 }
 
 @test "run_github skips upload when the SSH key is already registered with GitHub" {
@@ -112,7 +112,7 @@ teardown() {
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"already registered with GitHub, skipping"* ]]
-  ! grep -q "ssh-key add" "$MAC_UP_CALL_LOG"
+  ! grep -q "ssh-key add" "$MACUP_CALL_LOG"
 }
 
 @test "run_github warns but does not fail when SSH key upload fails" {
@@ -130,7 +130,7 @@ teardown() {
 }
 
 @test "run_github reports SSH key generation in dry-run mode without generating a key" {
-  export MAC_UP_DRY_RUN=1
+  export MACUP_DRY_RUN=1
 
   run run_github
 
@@ -145,15 +145,15 @@ teardown() {
   echo "existing-key" > "$HOME/.ssh/id_ed25519"
   echo "ssh-ed25519 AAAAtest existing@example.com" > "$HOME/.ssh/id_ed25519.pub"
   export GH_AUTH_STATUS_EXIT=1
-  export MAC_UP_DRY_RUN=1
+  export MACUP_DRY_RUN=1
 
   run run_github
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"[dry-run] would authenticate via a GitHub PAT, then check/register the SSH key with GitHub"* ]]
-  ! grep -q "auth login" "$MAC_UP_CALL_LOG"
-  ! grep -q "api user/keys" "$MAC_UP_CALL_LOG"
-  ! grep -q "ssh-key add" "$MAC_UP_CALL_LOG"
+  ! grep -q "auth login" "$MACUP_CALL_LOG"
+  ! grep -q "api user/keys" "$MACUP_CALL_LOG"
+  ! grep -q "ssh-key add" "$MACUP_CALL_LOG"
 }
 
 @test "run_github reports the ssh-key upload in dry-run mode when already authenticated but not registered" {
@@ -162,13 +162,13 @@ teardown() {
   echo "ssh-ed25519 AAAAtest existing@example.com" > "$HOME/.ssh/id_ed25519.pub"
   export GH_AUTH_STATUS_EXIT=0
   export GH_REGISTERED_KEYS=""
-  export MAC_UP_DRY_RUN=1
+  export MACUP_DRY_RUN=1
 
   run run_github
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"[dry-run] would upload the SSH key to GitHub via gh ssh-key add"* ]]
-  ! grep -q "ssh-key add" "$MAC_UP_CALL_LOG"
+  ! grep -q "ssh-key add" "$MACUP_CALL_LOG"
 }
 
 @test "run_github still reports an already-registered key in dry-run mode" {
@@ -177,7 +177,7 @@ teardown() {
   echo "ssh-ed25519 AAAAtest existing@example.com" > "$HOME/.ssh/id_ed25519.pub"
   export GH_AUTH_STATUS_EXIT=0
   export GH_REGISTERED_KEYS="AAAAtest"
-  export MAC_UP_DRY_RUN=1
+  export MACUP_DRY_RUN=1
 
   run run_github
 
@@ -191,11 +191,11 @@ teardown() {
   echo "ssh-ed25519 AAAAtest existing@example.com" > "$HOME/.ssh/id_ed25519.pub"
   export GH_AUTH_STATUS_EXIT=0
   export GH_REGISTERED_KEYS="AAAAtest"
-  export MAC_UP_DRY_RUN=1
+  export MACUP_DRY_RUN=1
 
   run run_github
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"[dry-run] would copy the public key to the clipboard"* ]]
-  ! grep -q "pbcopy" "$MAC_UP_CALL_LOG"
+  ! grep -q "pbcopy" "$MACUP_CALL_LOG"
 }

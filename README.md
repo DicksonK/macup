@@ -1,27 +1,27 @@
-# mac-up
+# macup
 
 Bootstrap a fresh Mac to a working dev environment, or keep an existing
-one in sync. `mac-up` installs Homebrew packages, Oh My Zsh +
+one in sync. `macup` installs Homebrew packages, Oh My Zsh +
 Powerlevel10k, symlinks dotfiles, applies a curated set of macOS system
 defaults, and sets up a GitHub SSH key + `gh` CLI authentication.
 
 ## Install
 
 ```sh
-brew tap dicksonk/mac-up
-brew install mac-up
+brew tap dicksonk/macup
+brew install macup
 ```
 
 ## Usage
 
 ```sh
-mac-up                          # interactive checklist, runs selected modules
-mac-up --all                    # run all modules, non-interactive
-mac-up homebrew dotfiles        # run only the named modules, non-interactive
-mac-up --dotfiles-repo=<url> dotfiles
-mac-up --brewfile=<path> homebrew
-mac-up --dry-run --all          # preview every module's intended actions, no changes made
-mac-up --help
+macup                          # interactive checklist, runs selected modules
+macup --all                    # run all modules, non-interactive
+macup homebrew dotfiles        # run only the named modules, non-interactive
+macup --dotfiles-repo=<url> dotfiles
+macup --brewfile=<path> homebrew
+macup --dry-run --all          # preview every module's intended actions, no changes made
+macup --help
 ```
 
 Modules: `homebrew`, `shell`, `dotfiles`, `macos-defaults`, `github`.
@@ -32,8 +32,8 @@ more) with example output.
 
 ## Configuration
 
-On first run (or on demand), `mac-up` offers to create
-`~/.config/mac-up/config` from `mac-up.conf.example`:
+On first run (or on demand), `macup` offers to create
+`~/.config/macup/config` from `macup.conf.example`:
 
 ```sh
 DOTFILES_REPO=              # e.g. git@github.com:you/dotfiles.git — blank uses bundled dotfiles
@@ -43,13 +43,13 @@ EXTRA_BREWFILE=             # e.g. /Users/you/Brewfile.personal — blank means 
 `--dotfiles-repo=<url>` and `--brewfile=<path>` override these for a
 single run without editing the file.
 
-`mac-up dotfiles` also manages a per-machine `~/.gitconfig.local` file
+`macup dotfiles` also manages a per-machine `~/.gitconfig.local` file
 (via `git config -f`, never symlinked) for `git config user.name`/
 `user.email`. It prompts once, the first time either is unset, and
 reuses whatever's already there on later runs. This is separate from —
 and never overwrites — the bundled `dotfiles/gitconfig`.
 
-`mac-up github` requires a GitHub Personal Access Token (classic) with
+`macup github` requires a GitHub Personal Access Token (classic) with
 the `repo`, `read:org`, `gist`, and `admin:public_key` scopes, created
 at https://github.com/settings/tokens. It's used for `gh auth login
 --with-token`, and the generated SSH key is then auto-uploaded to your
@@ -64,10 +64,10 @@ it likewise can't preview which files an unfetched external repo
 contains.
 
 Every run also writes its `log_info`/`log_warn`/`log_error` output to a
-plain-text log at `~/.cache/mac-up/logs/<timestamp>.log` — one file per
+plain-text log at `~/.cache/macup/logs/<timestamp>.log` — one file per
 run, path printed at the end of the summary, no rotation or config
 needed. Raw subcommand output (`brew`, `git`, `ssh-keygen`, etc.) and
-`gum`'s own interactive rendering aren't captured, only mac-up's own
+`gum`'s own interactive rendering aren't captured, only macup's own
 status lines.
 
 ## Development
@@ -75,7 +75,7 @@ status lines.
 Run from a local checkout:
 
 ```sh
-./bin/mac-up --help
+./bin/macup --help
 ```
 
 The Homebrew formula pulls in `gum`, `git`, and `gh` automatically via
@@ -112,6 +112,6 @@ be verified by hand on a real or VM Mac before a release:
 
 1. Tag the source repo: `git tag vX.Y.Z && git push --tags`.
 2. Download the tarball and compute its checksum:
-   `curl -sL https://github.com/dicksonk/mac-up/archive/refs/tags/vX.Y.Z.tar.gz | shasum -a 256`
-3. Update `url` and `sha256` in `packaging/homebrew/mac-up.rb`, copy it to
-   `homebrew-mac-up/Formula/mac-up.rb` in the tap repo, and push.
+   `curl -sL https://github.com/dicksonk/macup/archive/refs/tags/vX.Y.Z.tar.gz | shasum -a 256`
+3. Update `url` and `sha256` in `packaging/homebrew/macup.rb`, copy it to
+   `homebrew-macup/Formula/macup.rb` in the tap repo, and push.

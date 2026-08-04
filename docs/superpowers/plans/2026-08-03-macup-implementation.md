@@ -1,14 +1,14 @@
-# mac-up CLI Implementation Plan
+# macup CLI Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build the `mac-up` bash CLI (source repo) described in
-`docs/superpowers/specs/2026-08-03-mac-up-design.md`: a gum-driven,
+**Goal:** Build the `macup` bash CLI (source repo) described in
+`docs/superpowers/specs/2026-08-03-macup-design.md`: a gum-driven,
 idempotent Mac bootstrap/sync tool with five modules (homebrew, shell,
 dotfiles, macos-defaults, github), bats-core tests, and a Homebrew
 formula template for the companion tap repo.
 
-**Architecture:** A single entrypoint (`bin/mac-up`) resolves its real
+**Architecture:** A single entrypoint (`bin/macup`) resolves its real
 install location (so it works both as a Homebrew Cellar symlink and as a
 local checkout), sources `lib/common.sh` and `lib/menu.sh` for shared
 logging/config/TUI helpers, then sources and dispatches to one
@@ -24,10 +24,10 @@ Homebrew (`brew bundle`), bats-core for tests.
 
 ## Global Constraints
 
-- Distributed via two repos: source `github.com/dicksonk/mac-up` (this
-  plan) and tap `github.com/dicksonk/homebrew-mac-up` (formula only,
+- Distributed via two repos: source `github.com/dicksonk/macup` (this
+  plan) and tap `github.com/dicksonk/homebrew-macup` (formula only,
   Task 11).
-- `bin/mac-up` runs with `set -euo pipefail`; each module function traps
+- `bin/macup` runs with `set -euo pipefail`; each module function traps
   its own errors and returns non-zero rather than letting the whole
   process die mid-module.
 - Network-dependent steps (Homebrew install, OMZ install, git
@@ -55,8 +55,8 @@ Homebrew (`brew bundle`), bats-core for tests.
 ## File Structure
 
 ```
-mac-up/
-├── bin/mac-up                     # entrypoint (Task 9)
+macup/
+├── bin/macup                     # entrypoint (Task 9)
 ├── lib/
 │   ├── common.sh                  # logging, resolve_script_dir, load_config (Tasks 1, 3)
 │   ├── menu.sh                    # gum wrappers (Task 2)
@@ -67,8 +67,8 @@ mac-up/
 │   └── github.sh                  # Task 8
 ├── Brewfile                       # Task 4
 ├── dotfiles/{zshrc,p10k.zsh,gitconfig}  # Task 6
-├── mac-up.conf.example            # Task 3
-├── packaging/homebrew/mac-up.rb   # tap formula template (Task 11)
+├── macup.conf.example            # Task 3
+├── packaging/homebrew/macup.rb   # tap formula template (Task 11)
 ├── tests/
 │   ├── test_helper/
 │   │   ├── load.bash              # setup/teardown, PATH + HOME sandbox (Task 1)
@@ -80,7 +80,7 @@ mac-up/
 │   ├── dotfiles.bats               # Task 6
 │   ├── macos_defaults.bats         # Task 7
 │   ├── github.bats                 # Task 8
-│   └── mac_up.bats                 # Task 9
+│   └── macup.bats                 # Task 9
 └── README.md                       # Task 10
 ```
 
@@ -107,10 +107,10 @@ mac-up/
   (symlink-resolved) directory containing `source_path` to stdout.
 - Produces: `log_info(msg)`, `log_warn(msg)`, `log_error(msg)` → print a
   styled line to stdout (`log_info`) or stderr (`log_warn`, `log_error`).
-- Produces (test infra): `mac_up_test_setup` — sets `ROOT_DIR` to the
+- Produces (test infra): `macup_test_setup` — sets `ROOT_DIR` to the
   repo root, `HOME` to a fresh temp dir, prepends
-  `tests/test_helper/stubs` to `PATH`, and sets `MAC_UP_CALL_LOG` to a
-  fresh temp file every stub appends its invocation to. `mac_up_test_teardown`
+  `tests/test_helper/stubs` to `PATH`, and sets `MACUP_CALL_LOG` to a
+  fresh temp file every stub appends its invocation to. `macup_test_teardown`
   removes both temp paths. Every later `.bats` file's `setup()`/`teardown()`
   calls these.
 
@@ -123,14 +123,14 @@ Run: `brew install bats-core` (only if `bats --version` fails).
 `tests/test_helper/stubs/brew`:
 ```bash
 #!/usr/bin/env bash
-echo "brew $*" >> "${MAC_UP_CALL_LOG:-/dev/null}"
+echo "brew $*" >> "${MACUP_CALL_LOG:-/dev/null}"
 exit "${BREW_EXIT:-0}"
 ```
 
 `tests/test_helper/stubs/gh`:
 ```bash
 #!/usr/bin/env bash
-echo "gh $*" >> "${MAC_UP_CALL_LOG:-/dev/null}"
+echo "gh $*" >> "${MACUP_CALL_LOG:-/dev/null}"
 if [ "$1" = "auth" ] && [ "$2" = "status" ]; then
   exit "${GH_AUTH_STATUS_EXIT:-1}"
 fi
@@ -143,7 +143,7 @@ exit 0
 `tests/test_helper/stubs/gum`:
 ```bash
 #!/usr/bin/env bash
-echo "gum $*" >> "${MAC_UP_CALL_LOG:-/dev/null}"
+echo "gum $*" >> "${MACUP_CALL_LOG:-/dev/null}"
 case "$1" in
   choose)
     printf '%s\n' "${GUM_CHOOSE_RESULT:-}"
@@ -181,7 +181,7 @@ esac
 `tests/test_helper/stubs/git`:
 ```bash
 #!/usr/bin/env bash
-echo "git $*" >> "${MAC_UP_CALL_LOG:-/dev/null}"
+echo "git $*" >> "${MACUP_CALL_LOG:-/dev/null}"
 case "$1" in
   clone)
     target="${*: -1}"
@@ -197,7 +197,7 @@ esac
 `tests/test_helper/stubs/ssh-keygen`:
 ```bash
 #!/usr/bin/env bash
-echo "ssh-keygen $*" >> "${MAC_UP_CALL_LOG:-/dev/null}"
+echo "ssh-keygen $*" >> "${MACUP_CALL_LOG:-/dev/null}"
 prev=""
 keypath=""
 for arg in "$@"; do
@@ -214,14 +214,14 @@ exit 0
 `tests/test_helper/stubs/ssh-add`:
 ```bash
 #!/usr/bin/env bash
-echo "ssh-add $*" >> "${MAC_UP_CALL_LOG:-/dev/null}"
+echo "ssh-add $*" >> "${MACUP_CALL_LOG:-/dev/null}"
 exit 0
 ```
 
 `tests/test_helper/stubs/pbcopy`:
 ```bash
 #!/usr/bin/env bash
-echo "pbcopy" >> "${MAC_UP_CALL_LOG:-/dev/null}"
+echo "pbcopy" >> "${MACUP_CALL_LOG:-/dev/null}"
 cat > /dev/null
 exit 0
 ```
@@ -244,7 +244,7 @@ case "$1" in
     grep -vF "$domain|$key|" "$STORE" > "$STORE.tmp" 2>/dev/null || true
     mv "$STORE.tmp" "$STORE"
     echo "$domain|$key|$value" >> "$STORE"
-    echo "defaults write $domain $key $value" >> "${MAC_UP_CALL_LOG:-/dev/null}"
+    echo "defaults write $domain $key $value" >> "${MACUP_CALL_LOG:-/dev/null}"
     exit 0
     ;;
 esac
@@ -253,7 +253,7 @@ esac
 `tests/test_helper/stubs/killall`:
 ```bash
 #!/usr/bin/env bash
-echo "killall $*" >> "${MAC_UP_CALL_LOG:-/dev/null}"
+echo "killall $*" >> "${MACUP_CALL_LOG:-/dev/null}"
 exit 0
 ```
 
@@ -271,19 +271,19 @@ repo_root() {
   cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd
 }
 
-mac_up_test_setup() {
+macup_test_setup() {
   ROOT_DIR="$(repo_root)"
   export ROOT_DIR
   TEST_HOME="$(mktemp -d)"
   export HOME="$TEST_HOME"
   export PATH="$ROOT_DIR/tests/test_helper/stubs:$PATH"
-  MAC_UP_CALL_LOG="$(mktemp)"
-  export MAC_UP_CALL_LOG
+  MACUP_CALL_LOG="$(mktemp)"
+  export MACUP_CALL_LOG
 }
 
-mac_up_test_teardown() {
+macup_test_teardown() {
   rm -rf "$TEST_HOME"
-  rm -f "$MAC_UP_CALL_LOG"
+  rm -f "$MACUP_CALL_LOG"
 }
 ```
 
@@ -295,11 +295,11 @@ mac_up_test_teardown() {
 
 setup() {
   load 'test_helper/load'
-  mac_up_test_setup
+  macup_test_setup
 }
 
 teardown() {
-  mac_up_test_teardown
+  macup_test_teardown
 }
 
 @test "resolve_script_dir follows a chain of symlinks to the real directory" {
@@ -417,12 +417,12 @@ git commit -m "feat: add test harness, logging, and path resolution"
 
 setup() {
   load 'test_helper/load'
-  mac_up_test_setup
+  macup_test_setup
   source "$ROOT_DIR/lib/menu.sh"
 }
 
 teardown() {
-  mac_up_test_teardown
+  macup_test_teardown
 }
 
 @test "ui_choose_modules strips descriptions and returns module names" {
@@ -529,31 +529,31 @@ git commit -m "feat: add gum TUI wrapper functions"
 
 ---
 
-### Task 3: Configuration loading (`load_config`, `mac-up.conf.example`)
+### Task 3: Configuration loading (`load_config`, `macup.conf.example`)
 
 **Files:**
 - Modify: `lib/common.sh`
-- Create: `mac-up.conf.example`
+- Create: `macup.conf.example`
 - Modify: `tests/common.bats`
 
 **Interfaces:**
 - Consumes: `ui_confirm(prompt)` from [[Task 2]] `lib/menu.sh`; `$ROOT_DIR`
-  (set by the caller — tests via `mac_up_test_setup`, production by
-  `bin/mac-up` in [[Task 9]]).
+  (set by the caller — tests via `macup_test_setup`, production by
+  `bin/macup` in [[Task 9]]).
 - Produces: `load_config()` — sets (and exports) `DOTFILES_REPO` and
   `EXTRA_BREWFILE` (defaulting to `""`) by sourcing
-  `~/.config/mac-up/config` if present; if absent, offers via
-  `ui_confirm` to create it from `$ROOT_DIR/mac-up.conf.example`.
+  `~/.config/macup/config` if present; if absent, offers via
+  `ui_confirm` to create it from `$ROOT_DIR/macup.conf.example`.
 
-- [ ] **Step 1: Write `mac-up.conf.example`**
+- [ ] **Step 1: Write `macup.conf.example`**
 
 ```sh
-# mac-up configuration
+# macup configuration
 # Uncomment and set values to customize a run. Leave blank/commented to
 # use the bundled defaults.
 
 # Git URL of an external dotfiles repo to use instead of the bundled
-# dotfiles/ directory (cloned into ~/.cache/mac-up/dotfiles-repo).
+# dotfiles/ directory (cloned into ~/.cache/macup/dotfiles-repo).
 #DOTFILES_REPO=
 
 # Path to an additional Brewfile to run after the bundled Brewfile.
@@ -568,7 +568,7 @@ Append to `tests/common.bats` (add `source "$ROOT_DIR/lib/menu.sh"` to
 ```bash
 setup() {
   load 'test_helper/load'
-  mac_up_test_setup
+  macup_test_setup
   source "$ROOT_DIR/lib/common.sh"
   source "$ROOT_DIR/lib/menu.sh"
 }
@@ -576,8 +576,8 @@ setup() {
 
 ```bash
 @test "load_config sources an existing config file" {
-  mkdir -p "$TEST_HOME/.config/mac-up"
-  cat > "$TEST_HOME/.config/mac-up/config" <<'EOF'
+  mkdir -p "$TEST_HOME/.config/macup"
+  cat > "$TEST_HOME/.config/macup/config" <<'EOF'
 DOTFILES_REPO=git@github.com:example/dotfiles.git
 EXTRA_BREWFILE=/tmp/extra.Brewfile
 EOF
@@ -595,7 +595,7 @@ EOF
 
   [ "$DOTFILES_REPO" = "" ]
   [ "$EXTRA_BREWFILE" = "" ]
-  [ ! -f "$TEST_HOME/.config/mac-up/config" ]
+  [ ! -f "$TEST_HOME/.config/macup/config" ]
 }
 
 @test "load_config creates the config file from the example when confirmed" {
@@ -603,8 +603,8 @@ EOF
 
   load_config
 
-  [ -f "$TEST_HOME/.config/mac-up/config" ]
-  diff "$TEST_HOME/.config/mac-up/config" "$ROOT_DIR/mac-up.conf.example"
+  [ -f "$TEST_HOME/.config/macup/config" ]
+  diff "$TEST_HOME/.config/macup/config" "$ROOT_DIR/macup.conf.example"
 }
 ```
 
@@ -619,9 +619,9 @@ Append to `lib/common.sh`:
 ```bash
 
 load_config() {
-  local config_dir="$HOME/.config/mac-up"
+  local config_dir="$HOME/.config/macup"
   local config_file="$config_dir/config"
-  local example_file="$ROOT_DIR/mac-up.conf.example"
+  local example_file="$ROOT_DIR/macup.conf.example"
 
   DOTFILES_REPO="${DOTFILES_REPO:-}"
   EXTRA_BREWFILE="${EXTRA_BREWFILE:-}"
@@ -648,7 +648,7 @@ Expected: PASS (7 tests).
 - [ ] **Step 6: Commit**
 
 ```bash
-git add lib/common.sh mac-up.conf.example tests/common.bats
+git add lib/common.sh macup.conf.example tests/common.bats
 git commit -m "feat: add config file loading"
 ```
 
@@ -667,8 +667,8 @@ git commit -m "feat: add config file loading"
 - Produces: `run_homebrew()` → returns 0 on success, 1 on failure. Exposes
   two overridable path variables (defaulting to the real Homebrew binary
   locations) so tests never touch real system paths:
-  `MAC_UP_BREW_PATH_APPLE_SILICON` (default `/opt/homebrew/bin/brew`),
-  `MAC_UP_BREW_PATH_INTEL` (default `/usr/local/bin/brew`).
+  `MACUP_BREW_PATH_APPLE_SILICON` (default `/opt/homebrew/bin/brew`),
+  `MACUP_BREW_PATH_INTEL` (default `/usr/local/bin/brew`).
 
 - [ ] **Step 1: Write `Brewfile`**
 
@@ -700,27 +700,27 @@ cask "rectangle"
 
 setup() {
   load 'test_helper/load'
-  mac_up_test_setup
+  macup_test_setup
 
-  MAC_UP_BREW_PATH_APPLE_SILICON="$TEST_HOME/brew-apple"
-  MAC_UP_BREW_PATH_INTEL="$TEST_HOME/brew-intel"
-  export MAC_UP_BREW_PATH_APPLE_SILICON MAC_UP_BREW_PATH_INTEL
+  MACUP_BREW_PATH_APPLE_SILICON="$TEST_HOME/brew-apple"
+  MACUP_BREW_PATH_INTEL="$TEST_HOME/brew-intel"
+  export MACUP_BREW_PATH_APPLE_SILICON MACUP_BREW_PATH_INTEL
 
   source "$ROOT_DIR/lib/common.sh"
   source "$ROOT_DIR/lib/homebrew.sh"
 }
 
 teardown() {
-  mac_up_test_teardown
+  macup_test_teardown
 }
 
 install_stub_brew() {
-  cat > "$MAC_UP_BREW_PATH_APPLE_SILICON" <<'EOF'
+  cat > "$MACUP_BREW_PATH_APPLE_SILICON" <<'EOF'
 #!/usr/bin/env bash
-echo "brew $*" >> "${MAC_UP_CALL_LOG:-/dev/null}"
+echo "brew $*" >> "${MACUP_CALL_LOG:-/dev/null}"
 exit "${BREW_EXIT:-0}"
 EOF
-  chmod +x "$MAC_UP_BREW_PATH_APPLE_SILICON"
+  chmod +x "$MACUP_BREW_PATH_APPLE_SILICON"
 }
 
 @test "run_homebrew runs brew bundle with the default Brewfile when brew is already installed" {
@@ -729,7 +729,7 @@ EOF
   run run_homebrew
 
   [ "$status" -eq 0 ]
-  grep -q "bundle --file=$ROOT_DIR/Brewfile" "$MAC_UP_CALL_LOG"
+  grep -q "bundle --file=$ROOT_DIR/Brewfile" "$MACUP_CALL_LOG"
 }
 
 @test "run_homebrew fails when brew bundle fails on the default Brewfile" {
@@ -749,7 +749,7 @@ EOF
   run run_homebrew
 
   [ "$status" -eq 0 ]
-  grep -q "bundle --file=$TEST_HOME/extra.Brewfile" "$MAC_UP_CALL_LOG"
+  grep -q "bundle --file=$TEST_HOME/extra.Brewfile" "$MACUP_CALL_LOG"
 }
 
 @test "run_homebrew warns and continues when EXTRA_BREWFILE is set but missing" {
@@ -773,15 +773,15 @@ Expected: FAIL — `lib/homebrew.sh: No such file or directory`.
 ```bash
 #!/usr/bin/env bash
 
-: "${MAC_UP_BREW_PATH_APPLE_SILICON:=/opt/homebrew/bin/brew}"
-: "${MAC_UP_BREW_PATH_INTEL:=/usr/local/bin/brew}"
+: "${MACUP_BREW_PATH_APPLE_SILICON:=/opt/homebrew/bin/brew}"
+: "${MACUP_BREW_PATH_INTEL:=/usr/local/bin/brew}"
 
 run_homebrew() {
   local brew_bin=""
-  if [ -x "$MAC_UP_BREW_PATH_APPLE_SILICON" ]; then
-    brew_bin="$MAC_UP_BREW_PATH_APPLE_SILICON"
-  elif [ -x "$MAC_UP_BREW_PATH_INTEL" ]; then
-    brew_bin="$MAC_UP_BREW_PATH_INTEL"
+  if [ -x "$MACUP_BREW_PATH_APPLE_SILICON" ]; then
+    brew_bin="$MACUP_BREW_PATH_APPLE_SILICON"
+  elif [ -x "$MACUP_BREW_PATH_INTEL" ]; then
+    brew_bin="$MACUP_BREW_PATH_INTEL"
   fi
 
   if [ -z "$brew_bin" ]; then
@@ -790,10 +790,10 @@ run_homebrew() {
       log_error "Homebrew installation failed"
       return 1
     fi
-    if [ -x "$MAC_UP_BREW_PATH_APPLE_SILICON" ]; then
-      brew_bin="$MAC_UP_BREW_PATH_APPLE_SILICON"
+    if [ -x "$MACUP_BREW_PATH_APPLE_SILICON" ]; then
+      brew_bin="$MACUP_BREW_PATH_APPLE_SILICON"
     else
-      brew_bin="$MAC_UP_BREW_PATH_INTEL"
+      brew_bin="$MACUP_BREW_PATH_INTEL"
     fi
   fi
 
@@ -851,13 +851,13 @@ git commit -m "feat: add homebrew module"
 
 setup() {
   load 'test_helper/load'
-  mac_up_test_setup
+  macup_test_setup
   source "$ROOT_DIR/lib/common.sh"
   source "$ROOT_DIR/lib/shell.sh"
 }
 
 teardown() {
-  mac_up_test_teardown
+  macup_test_teardown
 }
 
 @test "run_shell skips both installs when oh-my-zsh and powerlevel10k already exist" {
@@ -868,7 +868,7 @@ teardown() {
   [ "$status" -eq 0 ]
   [[ "$output" == *"Oh My Zsh already installed"* ]]
   [[ "$output" == *"Powerlevel10k already installed"* ]]
-  [ ! -f "$MAC_UP_CALL_LOG" ] || ! grep -q "git clone" "$MAC_UP_CALL_LOG"
+  [ ! -f "$MACUP_CALL_LOG" ] || ! grep -q "git clone" "$MACUP_CALL_LOG"
 }
 
 @test "run_shell clones powerlevel10k when oh-my-zsh exists but the theme doesn't" {
@@ -878,7 +878,7 @@ teardown() {
 
   [ "$status" -eq 0 ]
   [ -d "$HOME/.oh-my-zsh/custom/themes/powerlevel10k" ]
-  grep -q "clone --depth=1" "$MAC_UP_CALL_LOG"
+  grep -q "clone --depth=1" "$MACUP_CALL_LOG"
 }
 ```
 
@@ -951,7 +951,7 @@ git commit -m "feat: add shell module (Oh My Zsh + Powerlevel10k)"
 
 `dotfiles/zshrc`:
 ```sh
-# mac-up default .zshrc
+# macup default .zshrc
 export ZSH="$HOME/.oh-my-zsh"
 ZSH_THEME="powerlevel10k/powerlevel10k"
 plugins=(git)
@@ -989,14 +989,14 @@ typeset -g POWERLEVEL9K_MODE=nerdfont-complete
 
 setup() {
   load 'test_helper/load'
-  mac_up_test_setup
+  macup_test_setup
   source "$ROOT_DIR/lib/common.sh"
   source "$ROOT_DIR/lib/menu.sh"
   source "$ROOT_DIR/lib/dotfiles.sh"
 }
 
 teardown() {
-  mac_up_test_teardown
+  macup_test_teardown
 }
 
 @test "run_dotfiles symlinks bundled dotfiles into HOME when targets don't exist" {
@@ -1023,8 +1023,8 @@ teardown() {
   run run_dotfiles
 
   [ "$status" -eq 0 ]
-  [ -f "$HOME/.zshrc.mac-up-backup" ]
-  [ "$(cat "$HOME/.zshrc.mac-up-backup")" = "my custom zshrc" ]
+  [ -f "$HOME/.zshrc.macup-backup" ]
+  [ "$(cat "$HOME/.zshrc.macup-backup")" = "my custom zshrc" ]
   [ -L "$HOME/.zshrc" ]
 }
 
@@ -1046,7 +1046,7 @@ teardown() {
   run run_dotfiles
 
   [ "$status" -eq 0 ]
-  grep -q "clone git@github.com:example/dotfiles.git $HOME/.cache/mac-up/dotfiles-repo" "$MAC_UP_CALL_LOG"
+  grep -q "clone git@github.com:example/dotfiles.git $HOME/.cache/macup/dotfiles-repo" "$MACUP_CALL_LOG"
 }
 ```
 
@@ -1064,7 +1064,7 @@ run_dotfiles() {
   local source_dir
 
   if [ -n "${DOTFILES_REPO:-}" ]; then
-    local cache_dir="$HOME/.cache/mac-up/dotfiles-repo"
+    local cache_dir="$HOME/.cache/macup/dotfiles-repo"
     if [ -d "$cache_dir/.git" ]; then
       log_info "Updating dotfiles repo cache"
       if ! git -C "$cache_dir" pull --ff-only; then
@@ -1100,7 +1100,7 @@ run_dotfiles() {
     fi
 
     if ui_confirm "$target already exists. Back it up and replace with symlink?"; then
-      mv "$target" "$target.mac-up-backup"
+      mv "$target" "$target.macup-backup"
       ln -s "$file" "$target"
       log_info "Backed up and linked $target -> $file"
     else
@@ -1147,7 +1147,7 @@ git commit -m "feat: add dotfiles module and bundled default dotfiles"
 
 setup() {
   load 'test_helper/load'
-  mac_up_test_setup
+  macup_test_setup
   DEFAULTS_STORE="$TEST_HOME/.defaults-stub-store"
   export DEFAULTS_STORE
   source "$ROOT_DIR/lib/common.sh"
@@ -1155,7 +1155,7 @@ setup() {
 }
 
 teardown() {
-  mac_up_test_teardown
+  macup_test_teardown
 }
 
 @test "run_macos_defaults writes a setting that isn't already applied" {
@@ -1163,7 +1163,7 @@ teardown() {
 
   [ "$status" -eq 0 ]
   grep -q "com.apple.finder|AppleShowAllExtensions|true" "$DEFAULTS_STORE"
-  grep -q "defaults write com.apple.finder AppleShowAllExtensions true" "$MAC_UP_CALL_LOG"
+  grep -q "defaults write com.apple.finder AppleShowAllExtensions true" "$MACUP_CALL_LOG"
 }
 
 @test "run_macos_defaults skips a setting that's already correctly applied" {
@@ -1173,7 +1173,7 @@ teardown() {
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"com.apple.finder AppleShowAllExtensions already set to true, skipping"* ]]
-  ! grep -q "defaults write com.apple.finder AppleShowAllExtensions" "$MAC_UP_CALL_LOG"
+  ! grep -q "defaults write com.apple.finder AppleShowAllExtensions" "$MACUP_CALL_LOG"
 }
 
 @test "run_macos_defaults creates the Screenshots directory" {
@@ -1187,8 +1187,8 @@ teardown() {
   run run_macos_defaults
 
   [ "$status" -eq 0 ]
-  grep -q "killall Finder" "$MAC_UP_CALL_LOG"
-  grep -q "killall SystemUIServer" "$MAC_UP_CALL_LOG"
+  grep -q "killall Finder" "$MACUP_CALL_LOG"
+  grep -q "killall SystemUIServer" "$MACUP_CALL_LOG"
 }
 ```
 
@@ -1274,14 +1274,14 @@ git commit -m "feat: add macos-defaults module"
 
 setup() {
   load 'test_helper/load'
-  mac_up_test_setup
+  macup_test_setup
   source "$ROOT_DIR/lib/common.sh"
   source "$ROOT_DIR/lib/menu.sh"
   source "$ROOT_DIR/lib/github.sh"
 }
 
 teardown() {
-  mac_up_test_teardown
+  macup_test_teardown
 }
 
 @test "run_github generates an SSH key when none exists" {
@@ -1293,7 +1293,7 @@ teardown() {
   [ "$status" -eq 0 ]
   [ -f "$HOME/.ssh/id_ed25519" ]
   [ -f "$HOME/.ssh/id_ed25519.pub" ]
-  grep -q "ssh-keygen" "$MAC_UP_CALL_LOG"
+  grep -q "ssh-keygen" "$MACUP_CALL_LOG"
 }
 
 @test "run_github skips key generation when a key already exists" {
@@ -1306,7 +1306,7 @@ teardown() {
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"SSH key already exists"* ]]
-  ! grep -q "ssh-keygen" "$MAC_UP_CALL_LOG"
+  ! grep -q "ssh-keygen" "$MACUP_CALL_LOG"
 }
 
 @test "run_github logs in with gh when not already authenticated" {
@@ -1319,7 +1319,7 @@ teardown() {
   run run_github
 
   [ "$status" -eq 0 ]
-  grep -q "auth login" "$MAC_UP_CALL_LOG"
+  grep -q "auth login" "$MACUP_CALL_LOG"
 }
 
 @test "run_github skips gh login when already authenticated" {
@@ -1332,7 +1332,7 @@ teardown() {
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"gh already authenticated, skipping"* ]]
-  ! grep -q "auth login" "$MAC_UP_CALL_LOG"
+  ! grep -q "auth login" "$MACUP_CALL_LOG"
 }
 ```
 
@@ -1398,11 +1398,11 @@ git commit -m "feat: add github module (SSH key + gh auth)"
 
 ---
 
-### Task 9: `bin/mac-up` — entrypoint, CLI parsing, module dispatch
+### Task 9: `bin/macup` — entrypoint, CLI parsing, module dispatch
 
 **Files:**
-- Create: `bin/mac-up`
-- Test: `tests/mac_up.bats`
+- Create: `bin/macup`
+- Test: `tests/macup.bats`
 
 **Interfaces:**
 - Consumes: everything produced by Tasks 1–8: `resolve_script_dir`,
@@ -1411,29 +1411,29 @@ git commit -m "feat: add github module (SSH key + gh auth)"
   ([[Task 2]] `lib/menu.sh`); `run_homebrew` ([[Task 4]]); `run_shell`
   ([[Task 5]]); `run_dotfiles` ([[Task 6]]); `run_macos_defaults`
   ([[Task 7]]); `run_github` ([[Task 8]]).
-- Produces: the `mac-up` executable itself — no other task depends on
+- Produces: the `macup` executable itself — no other task depends on
   its internals.
 
 - [ ] **Step 1: Write the failing tests**
 
-`tests/mac_up.bats`:
+`tests/macup.bats`:
 ```bash
 #!/usr/bin/env bats
 
 setup() {
   load 'test_helper/load'
-  mac_up_test_setup
-  MAC_UP_BIN="$ROOT_DIR/bin/mac-up"
+  macup_test_setup
+  MACUP_BIN="$ROOT_DIR/bin/macup"
 
-  MAC_UP_BREW_PATH_APPLE_SILICON="$TEST_HOME/brew-apple"
-  MAC_UP_BREW_PATH_INTEL="$TEST_HOME/brew-intel"
-  export MAC_UP_BREW_PATH_APPLE_SILICON MAC_UP_BREW_PATH_INTEL
-  cat > "$MAC_UP_BREW_PATH_APPLE_SILICON" <<'EOF'
+  MACUP_BREW_PATH_APPLE_SILICON="$TEST_HOME/brew-apple"
+  MACUP_BREW_PATH_INTEL="$TEST_HOME/brew-intel"
+  export MACUP_BREW_PATH_APPLE_SILICON MACUP_BREW_PATH_INTEL
+  cat > "$MACUP_BREW_PATH_APPLE_SILICON" <<'EOF'
 #!/usr/bin/env bash
-echo "brew $*" >> "${MAC_UP_CALL_LOG:-/dev/null}"
+echo "brew $*" >> "${MACUP_CALL_LOG:-/dev/null}"
 exit 0
 EOF
-  chmod +x "$MAC_UP_BREW_PATH_APPLE_SILICON"
+  chmod +x "$MACUP_BREW_PATH_APPLE_SILICON"
 
   DEFAULTS_STORE="$TEST_HOME/.defaults-stub-store"
   export DEFAULTS_STORE
@@ -1443,44 +1443,44 @@ EOF
 }
 
 teardown() {
-  mac_up_test_teardown
+  macup_test_teardown
 }
 
-@test "mac-up --help prints usage and exits 0" {
-  run "$MAC_UP_BIN" --help
+@test "macup --help prints usage and exits 0" {
+  run "$MACUP_BIN" --help
 
   [ "$status" -eq 0 ]
-  [[ "$output" == *"Usage: mac-up"* ]]
+  [[ "$output" == *"Usage: macup"* ]]
 }
 
-@test "mac-up rejects an unknown argument" {
-  run "$MAC_UP_BIN" --bogus
+@test "macup rejects an unknown argument" {
+  run "$MACUP_BIN" --bogus
 
   [ "$status" -eq 1 ]
   [[ "$output" == *"Unknown argument"* ]]
 }
 
-@test "mac-up runs a single named module non-interactively" {
-  run "$MAC_UP_BIN" homebrew
+@test "macup runs a single named module non-interactively" {
+  run "$MACUP_BIN" homebrew
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"Running homebrew"* ]]
   [[ "$output" == *"succeeded: homebrew"* ]]
-  grep -q "bundle --file=$ROOT_DIR/Brewfile" "$MAC_UP_CALL_LOG"
+  grep -q "bundle --file=$ROOT_DIR/Brewfile" "$MACUP_CALL_LOG"
 }
 
-@test "mac-up --dotfiles-repo overrides DOTFILES_REPO for this run only" {
-  run "$MAC_UP_BIN" --dotfiles-repo=git@github.com:example/dotfiles.git dotfiles
+@test "macup --dotfiles-repo overrides DOTFILES_REPO for this run only" {
+  run "$MACUP_BIN" --dotfiles-repo=git@github.com:example/dotfiles.git dotfiles
 
   [ "$status" -eq 0 ]
-  grep -q "clone git@github.com:example/dotfiles.git $HOME/.cache/mac-up/dotfiles-repo" "$MAC_UP_CALL_LOG"
+  grep -q "clone git@github.com:example/dotfiles.git $HOME/.cache/macup/dotfiles-repo" "$MACUP_CALL_LOG"
 }
 
-@test "mac-up --all runs every module and reports failures without aborting" {
+@test "macup --all runs every module and reports failures without aborting" {
   mkdir -p "$HOME/.oh-my-zsh/custom/themes/powerlevel10k"
   export BREW_EXIT=1
 
-  run "$MAC_UP_BIN" --all
+  run "$MACUP_BIN" --all
 
   [ "$status" -eq 1 ]
   [[ "$output" == *"Running homebrew"* ]]
@@ -1494,10 +1494,10 @@ teardown() {
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `bats tests/mac_up.bats`
-Expected: FAIL — `bin/mac-up: No such file or directory`.
+Run: `bats tests/macup.bats`
+Expected: FAIL — `bin/macup: No such file or directory`.
 
-- [ ] **Step 3: Implement `bin/mac-up`**
+- [ ] **Step 3: Implement `bin/macup`**
 
 ```bash
 #!/usr/bin/env bash
@@ -1534,7 +1534,7 @@ ALL_MODULES=(homebrew shell dotfiles macos-defaults github)
 
 usage() {
   cat <<'EOF'
-Usage: mac-up [options] [module...]
+Usage: macup [options] [module...]
 
 Options:
   --all                     Run all modules, non-interactive
@@ -1644,12 +1644,12 @@ main "$@"
 - [ ] **Step 4: Make it executable**
 
 ```bash
-chmod +x bin/mac-up
+chmod +x bin/macup
 ```
 
 - [ ] **Step 5: Run tests to verify they pass**
 
-Run: `bats tests/mac_up.bats`
+Run: `bats tests/macup.bats`
 Expected: PASS (5 tests).
 
 - [ ] **Step 6: Run the full test suite**
@@ -1660,8 +1660,8 @@ Expected: PASS (all files, all tests).
 - [ ] **Step 7: Commit**
 
 ```bash
-git add bin/mac-up tests/mac_up.bats
-git commit -m "feat: add mac-up entrypoint with CLI parsing and module dispatch"
+git add bin/macup tests/macup.bats
+git commit -m "feat: add macup entrypoint with CLI parsing and module dispatch"
 ```
 
 ---
@@ -1678,37 +1678,37 @@ git commit -m "feat: add mac-up entrypoint with CLI parsing and module dispatch"
 - [ ] **Step 1: Write `README.md`**
 
 ```markdown
-# mac-up
+# macup
 
 Bootstrap a fresh Mac to a working dev environment, or keep an existing
-one in sync. `mac-up` installs Homebrew packages, Oh My Zsh +
+one in sync. `macup` installs Homebrew packages, Oh My Zsh +
 Powerlevel10k, symlinks dotfiles, applies a curated set of macOS system
 defaults, and sets up a GitHub SSH key + `gh` CLI authentication.
 
 ## Install
 
 ```sh
-brew tap dicksonk/mac-up
-brew install mac-up
+brew tap dicksonk/macup
+brew install macup
 ```
 
 ## Usage
 
 ```sh
-mac-up                          # interactive checklist, runs selected modules
-mac-up --all                    # run all modules, non-interactive
-mac-up homebrew dotfiles        # run only the named modules, non-interactive
-mac-up --dotfiles-repo=<url> dotfiles
-mac-up --brewfile=<path> homebrew
-mac-up --help
+macup                          # interactive checklist, runs selected modules
+macup --all                    # run all modules, non-interactive
+macup homebrew dotfiles        # run only the named modules, non-interactive
+macup --dotfiles-repo=<url> dotfiles
+macup --brewfile=<path> homebrew
+macup --help
 ```
 
 Modules: `homebrew`, `shell`, `dotfiles`, `macos-defaults`, `github`.
 
 ## Configuration
 
-On first run (or on demand), `mac-up` offers to create
-`~/.config/mac-up/config` from `mac-up.conf.example`:
+On first run (or on demand), `macup` offers to create
+`~/.config/macup/config` from `macup.conf.example`:
 
 ```sh
 DOTFILES_REPO=              # e.g. git@github.com:you/dotfiles.git — blank uses bundled dotfiles
@@ -1723,7 +1723,7 @@ single run without editing the file.
 Run from a local checkout:
 
 ```sh
-./bin/mac-up --help
+./bin/macup --help
 ```
 
 ### Tests
@@ -1754,9 +1754,9 @@ be verified by hand on a real or VM Mac before a release:
 
 1. Tag the source repo: `git tag vX.Y.Z && git push --tags`.
 2. Download the tarball and compute its checksum:
-   `curl -sL https://github.com/dicksonk/mac-up/archive/refs/tags/vX.Y.Z.tar.gz | shasum -a 256`
-3. Update `url` and `sha256` in `packaging/homebrew/mac-up.rb`, copy it to
-   `homebrew-mac-up/Formula/mac-up.rb` in the tap repo, and push.
+   `curl -sL https://github.com/dicksonk/macup/archive/refs/tags/vX.Y.Z.tar.gz | shasum -a 256`
+3. Update `url` and `sha256` in `packaging/homebrew/macup.rb`, copy it to
+   `homebrew-macup/Formula/macup.rb` in the tap repo, and push.
 ```
 
 - [ ] **Step 2: Commit**
@@ -1771,20 +1771,20 @@ git commit -m "docs: add README"
 ### Task 11: Homebrew tap formula template
 
 **Files:**
-- Create: `packaging/homebrew/mac-up.rb`
+- Create: `packaging/homebrew/macup.rb`
 
 **Interfaces:**
 - Consumes: nothing (static template, copied manually into the separate
-  `homebrew-mac-up` tap repo per the README's release process).
+  `homebrew-macup` tap repo per the README's release process).
 - Produces: nothing consumed by other tasks in this repo.
 
-- [ ] **Step 1: Write `packaging/homebrew/mac-up.rb`**
+- [ ] **Step 1: Write `packaging/homebrew/macup.rb`**
 
 ```ruby
-class MacUp < Formula
+class Macup < Formula
   desc "Bootstrap and keep a Mac dev environment in sync"
-  homepage "https://github.com/dicksonk/mac-up"
-  url "https://github.com/dicksonk/mac-up/archive/refs/tags/v0.1.0.tar.gz"
+  homepage "https://github.com/dicksonk/macup"
+  url "https://github.com/dicksonk/macup/archive/refs/tags/v0.1.0.tar.gz"
   sha256 "REPLACE_WITH_RELEASE_TARBALL_SHA256"
   license "MIT"
 
@@ -1794,24 +1794,24 @@ class MacUp < Formula
 
   def install
     libexec.install Dir["*"]
-    bin.install_symlink libexec/"bin/mac-up"
+    bin.install_symlink libexec/"bin/macup"
   end
 
   test do
-    system "#{bin}/mac-up", "--help"
+    system "#{bin}/macup", "--help"
   end
 end
 ```
 
 - [ ] **Step 2: Verify it's syntactically valid Ruby**
 
-Run: `ruby -c packaging/homebrew/mac-up.rb`
+Run: `ruby -c packaging/homebrew/macup.rb`
 Expected: `Syntax OK`
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add packaging/homebrew/mac-up.rb
+git add packaging/homebrew/macup.rb
 git commit -m "feat: add homebrew tap formula template"
 ```
 
@@ -1828,6 +1828,6 @@ git commit -m "feat: add homebrew tap formula template"
 - **Placeholder scan:** no TODOs; every step has runnable code and an
   expected result.
 - **Type/name consistency:** `run_<module>()` names, `ui_*` signatures,
-  `MAC_UP_BREW_PATH_*` override vars, and `MAC_UP_CALL_LOG`/`TEST_HOME`
+  `MACUP_BREW_PATH_*` override vars, and `MACUP_CALL_LOG`/`TEST_HOME`
   test-helper variables are used identically across every task that
   references them.

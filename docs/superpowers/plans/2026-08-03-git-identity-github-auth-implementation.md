@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Give `mac-up` a per-machine git identity (`~/.gitconfig.local`,
+**Goal:** Give `macup` a per-machine git identity (`~/.gitconfig.local`,
 never symlinked/tracked) and redesign `github.sh`'s auth flow to use a
 GitHub Personal Access Token instead of a browser-based `gh auth login` +
 manual key paste, reusing the identity email and auto-uploading the SSH
@@ -30,7 +30,7 @@ project).
 - `~/.gitconfig.local` is a plain file: never a symlink, never tracked by
   any repo (bundled or external).
 - No support for GitHub Enterprise or non-github.com hosts.
-- `mac-up` never persists the PAT itself anywhere in its own files — `gh
+- `macup` never persists the PAT itself anywhere in its own files — `gh
   auth login --with-token` hands it to gh's own secure credential
   storage. The token is never logged and never passed as a CLI argument
   (only via stdin).
@@ -46,7 +46,7 @@ project).
 ## File Structure
 
 ```
-mac-up/
+macup/
 ├── dotfiles/gitconfig              # bundled content change (Task 2)
 ├── lib/
 │   ├── menu.sh                     # + ui_input_secret() (Task 1)
@@ -94,7 +94,7 @@ command...`):
 @test "ui_input_secret passes --password to gum input" {
   run ui_input_secret "GitHub Personal Access Token"
   [ "$status" -eq 0 ]
-  grep -q -- "--password" "$MAC_UP_CALL_LOG"
+  grep -q -- "--password" "$MACUP_CALL_LOG"
 }
 ```
 
@@ -152,7 +152,7 @@ the `*)` catch-all:
 
 ```bash
 #!/usr/bin/env bash
-echo "git $*" >> "${MAC_UP_CALL_LOG:-/dev/null}"
+echo "git $*" >> "${MACUP_CALL_LOG:-/dev/null}"
 case "$1" in
   clone)
     target="${*: -1}"
@@ -322,7 +322,7 @@ Replace the whole file with:
 
 ```bash
 #!/usr/bin/env bash
-echo "gh $*" >> "${MAC_UP_CALL_LOG:-/dev/null}"
+echo "gh $*" >> "${MACUP_CALL_LOG:-/dev/null}"
 if [ "$1" = "auth" ] && [ "$2" = "status" ]; then
   exit "${GH_AUTH_STATUS_EXIT:-1}"
 fi
@@ -361,7 +361,7 @@ expects. Update it to:
   run run_github
 
   [ "$status" -eq 0 ]
-  grep -q "auth login --with-token" "$MAC_UP_CALL_LOG"
+  grep -q "auth login --with-token" "$MACUP_CALL_LOG"
   [[ "$output" == *"github.com/settings/tokens"* ]]
   [[ "$output" == *"admin:public_key"* ]]
 }
@@ -391,7 +391,7 @@ Append to `tests/github.bats` (after the last existing test):
   run run_github
 
   [ "$status" -eq 0 ]
-  grep -q "ssh-keygen.*-C identity@example.com" "$MAC_UP_CALL_LOG"
+  grep -q "ssh-keygen.*-C identity@example.com" "$MACUP_CALL_LOG"
 }
 
 @test "run_github auto-uploads the SSH key when not yet registered with GitHub" {
@@ -404,7 +404,7 @@ Append to `tests/github.bats` (after the last existing test):
   run run_github
 
   [ "$status" -eq 0 ]
-  grep -q "ssh-key add" "$MAC_UP_CALL_LOG"
+  grep -q "ssh-key add" "$MACUP_CALL_LOG"
 }
 
 @test "run_github skips upload when the SSH key is already registered with GitHub" {
@@ -418,7 +418,7 @@ Append to `tests/github.bats` (after the last existing test):
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"already registered with GitHub, skipping"* ]]
-  ! grep -q "ssh-key add" "$MAC_UP_CALL_LOG"
+  ! grep -q "ssh-key add" "$MACUP_CALL_LOG"
 }
 
 @test "run_github warns but does not fail when SSH key upload fails" {
@@ -502,7 +502,7 @@ run_github() {
     if gh api user/keys --jq '.[].key' 2>/dev/null | grep -qF "$key_blob"; then
       log_info "SSH key already registered with GitHub, skipping"
     else
-      if ! gh ssh-key add "$key_path.pub" --title "mac-up ($(scutil --get ComputerName 2>/dev/null || hostname))"; then
+      if ! gh ssh-key add "$key_path.pub" --title "macup ($(scutil --get ComputerName 2>/dev/null || hostname))"; then
         log_warn "Failed to auto-register SSH key with GitHub — add it manually at https://github.com/settings/keys using the public key printed above"
       fi
     fi

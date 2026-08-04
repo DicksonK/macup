@@ -1,5 +1,5 @@
 [include]
-	path = ~/.gitconfig.local  # per-machine user.name/user.email, written by mac-up
+	path = ~/.gitconfig.local  # per-machine user.name/user.email, written by macup
 
 [core]
     autocrlf = input  # keep newlines as in input

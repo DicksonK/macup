@@ -32,7 +32,7 @@ ALL_MODULES=(homebrew shell dotfiles macos-defaults github)
 
 usage() {
   cat <<'EOF'
-Usage: mac-up [options] [module...]
+Usage: macup [options] [module...]
 
 Options:
   --all                     Run all modules, non-interactive
@@ -80,8 +80,8 @@ run_selected_modules() {
   if is_dry_run; then
     log_info "(dry run — nothing was actually changed)"
   fi
-  if [ -n "${MAC_UP_LOG_FILE:-}" ]; then
-    log_info "Full log: $MAC_UP_LOG_FILE"
+  if [ -n "${MACUP_LOG_FILE:-}" ]; then
+    log_info "Full log: $MACUP_LOG_FILE"
   fi
 
   if [ "${#failed[@]}" -gt 0 ]; then
@@ -132,21 +132,21 @@ main() {
   done
 
   init_log_file
-  log_info "mac-up run: mac-up $(_redact_secrets "$invocation")"
+  log_info "macup run: macup $(_redact_secrets "$invocation")"
 
   if [ "$run_all" = true ] || [ "${#modules[@]}" -gt 0 ]; then
-    MAC_UP_NONINTERACTIVE=1
+    MACUP_NONINTERACTIVE=1
   else
-    MAC_UP_NONINTERACTIVE=0
+    MACUP_NONINTERACTIVE=0
   fi
-  export MAC_UP_NONINTERACTIVE
+  export MACUP_NONINTERACTIVE
 
   if [ "$dry_run" = true ]; then
-    MAC_UP_DRY_RUN=1
+    MACUP_DRY_RUN=1
   else
-    MAC_UP_DRY_RUN=0
+    MACUP_DRY_RUN=0
   fi
-  export MAC_UP_DRY_RUN
+  export MACUP_DRY_RUN
 
   if is_dry_run; then
     log_info "Dry run: no changes will be made"

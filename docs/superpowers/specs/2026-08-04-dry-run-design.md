@@ -2,8 +2,8 @@
 
 ## Purpose
 
-`mac-up` currently has no way to preview what a run would do without
-actually doing it. This spec adds `mac-up --dry-run`: every module still
+`macup` currently has no way to preview what a run would do without
+actually doing it. This spec adds `macup --dry-run`: every module still
 runs its real, read-only detection/idempotency logic (what's already
 installed, what's already linked, what's already configured), but every
 actual mutation (installing packages, writing files, symlinking, running
@@ -25,8 +25,8 @@ describe what *would* happen.
   would find registered on the account — it reports the auth step and
   skips the registration check for that run, rather than guessing.
 - `--dry-run` does not imply `--all` or non-interactive module
-  *selection* — it's orthogonal to `MAC_UP_NONINTERACTIVE`. Running
-  `mac-up --dry-run` alone still shows the interactive module checklist;
+  *selection* — it's orthogonal to `MACUP_NONINTERACTIVE`. Running
+  `macup --dry-run` alone still shows the interactive module checklist;
   only the selected modules' *execution* becomes a preview.
 
 ## Design
@@ -35,7 +35,7 @@ describe what *would* happen.
 
 ```bash
 is_dry_run() {
-  [ "${MAC_UP_DRY_RUN:-0}" = "1" ]
+  [ "${MACUP_DRY_RUN:-0}" = "1" ]
 }
 
 dry_run_report() {
@@ -44,16 +44,16 @@ dry_run_report() {
 ```
 
 `dry_run_report` goes through `log_info`, so dry-run output is captured
-by the existing per-run log file (`~/.cache/mac-up/logs/...`) exactly
+by the existing per-run log file (`~/.cache/macup/logs/...`) exactly
 like any other status line — no special-casing needed there.
 
-### `bin/mac-up` wiring
+### `bin/macup` wiring
 
 - New `--dry-run` case in the CLI flag-parsing loop, setting a local
   `dry_run=true` (parallel to the existing `run_all` local), added to
   `usage()`'s options list.
-- After the flag-parsing loop (same place `MAC_UP_NONINTERACTIVE` is
-  computed and exported today), export `MAC_UP_DRY_RUN` (`1` or `0`)
+- After the flag-parsing loop (same place `MACUP_NONINTERACTIVE` is
+  computed and exported today), export `MACUP_DRY_RUN` (`1` or `0`)
   based on that local.
 - Immediately after `init_log_file` and the run-header log line, if
   dry-run: `log_info "Dry run: no changes will be made"`.
@@ -177,11 +177,11 @@ the same guard, reported as `"create $HOME/Screenshots"`.
 
 No new stub infrastructure is needed. Every module's existing stub
 executables (`brew`, `gh`, `git`, `ssh-keygen`, `defaults`, `killall`)
-already log their invocations to `$MAC_UP_CALL_LOG` — a dry-run test
+already log their invocations to `$MACUP_CALL_LOG` — a dry-run test
 asserts a stub command is *absent* from that log (the mutation never
 happened) while the corresponding `[dry-run] would ...` line *is*
-present in the captured output. `tests/mac_up.bats` gets a case
-confirming `mac-up --dry-run --all` produces zero stub invocations for
+present in the captured output. `tests/macup.bats` gets a case
+confirming `macup --dry-run --all` produces zero stub invocations for
 every mutating command across all five modules, while still reporting
 what each would have done.
 
@@ -189,11 +189,11 @@ what each would have done.
 
 - Produces: `is_dry_run()`, `dry_run_report(description)` in
   `lib/common.sh`.
-- Modifies: `bin/mac-up` (`--dry-run` flag, `MAC_UP_DRY_RUN` export,
+- Modifies: `bin/macup` (`--dry-run` flag, `MACUP_DRY_RUN` export,
   startup banner, summary line).
 - Modifies: `run_homebrew()`, `run_shell()`, `run_dotfiles()`,
   `run_macos_defaults()` (specifically `_defaults_apply()`), and
   `run_github()` — each gains `is_dry_run`/`dry_run_report` guards at
   its mutation and prompt points, with no change to their existing
   detection/idempotency logic, return-code semantics, or any other
-  behavior when `MAC_UP_DRY_RUN` is unset/`0`.
+  behavior when `MACUP_DRY_RUN` is unset/`0`.
