@@ -101,7 +101,6 @@ HIST_STAMPS="yyyy-mm-dd"
 # Add wisely, as too many plugins slow down shell startup.
 plugins=(
     thefuck
-    autoswitch_virtualenv
     aws
     # docker
     # docker-compose
@@ -110,7 +109,6 @@ plugins=(
     vscode
     z
     # ssh-agent
-    
     # fzf-tab
     zsh-autosuggestions
     zsh-syntax-highlighting
