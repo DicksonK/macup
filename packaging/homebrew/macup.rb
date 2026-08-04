@@ -1,8 +1,8 @@
 class Macup < Formula
   desc "Bootstrap and keep a Mac dev environment in sync"
   homepage "https://github.com/dicksonk/macup"
-  url "https://github.com/dicksonk/macup/archive/refs/tags/v0.1.0.tar.gz"
-  sha256 "a69ae06f6eb95cc6fa549421fcb22c9a05b35b7ff4f4cbba1116aa577a082c21"
+  url "https://github.com/dicksonk/macup/archive/refs/tags/v0.2.0.tar.gz"
+  sha256 "151fb9598474ebabb670882dc929420d9ab50648a6772ad6798a28c6140912a0"
   license "MIT"
 
   depends_on "git"
