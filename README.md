@@ -32,6 +32,7 @@ macup --dotfiles-repo=<url> dotfiles
 macup --brewfile=<path> homebrew
 macup --dry-run --all          # preview every module's intended actions, no changes made
 macup --help
+macup --version
 ```
 
 Modules: `homebrew`, `shell`, `dotfiles`, `macos-defaults`, `github`.
@@ -92,6 +93,16 @@ The Homebrew formula pulls in `gum`, `git`, and `gh` automatically via
 `depends_on`. Running from a local checkout instead, install them yourself
 first: `brew install gum git gh`.
 
+### Commit messages
+
+Commits on `main` should use [Conventional Commits](https://www.conventionalcommits.org/)
+prefixes — `fix:`, `feat:`, `feat!:` (or a `BREAKING CHANGE:` footer),
+`chore:`, `docs:`, `refactor:`, `test:`, etc. — since release-please
+parses them to decide the next version: `fix` bumps patch, `feat` bumps
+minor, a `!` or `BREAKING CHANGE:` footer bumps major. Other prefixes
+(`chore`, `docs`, ...) show up in the changelog but don't bump the
+version.
+
 ### Tests
 
 ```sh
@@ -120,8 +131,18 @@ be verified by hand on a real or VM Mac before a release:
 
 ## Cutting a release
 
-1. Tag the source repo: `git tag vX.Y.Z && git push --tags`.
-2. Download the tarball and compute its checksum:
-   `curl -sL https://github.com/dicksonk/macup/archive/refs/tags/vX.Y.Z.tar.gz | shasum -a 256`
-3. Update `url` and `sha256` in `packaging/homebrew/macup.rb`, copy it to
-   `homebrew-macup/Formula/macup.rb` in the tap repo, and push.
+Releases are automated via [release-please](https://github.com/googleapis/release-please)
+and GitHub Actions:
+
+1. Land Conventional-Commit-prefixed changes on `main` as usual (see
+   "Commit messages" above).
+2. release-please opens or updates a standing `chore(main): release
+   X.Y.Z` pull request tracking the next version, changelog, and bumped
+   `VERSION` file.
+3. When ready to ship, review and merge that PR. Merging it tags
+   `vX.Y.Z`, publishes a GitHub Release with the source tarball, and
+   pushes the updated formula (`url`/`sha256`) to both
+   `packaging/homebrew/macup.rb` in this repo and `Formula/macup.rb` in
+   the [homebrew-macup](https://github.com/dicksonk/homebrew-macup) tap.
+
+No manual tagging, checksum computation, or formula editing needed.
