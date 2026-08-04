@@ -33,6 +33,27 @@ teardown() {
   [[ "$output" == *"Usage: macup"* ]]
 }
 
+@test "macup --version prints the VERSION file contents and exits 0" {
+  run "$MACUP_BIN" --version
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "macup $(cat "$ROOT_DIR/VERSION")" ]
+}
+
+@test "macup -v is a shorthand for --version" {
+  run "$MACUP_BIN" -v
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "macup $(cat "$ROOT_DIR/VERSION")" ]
+}
+
+@test "macup -h prints usage and exits 0" {
+  run "$MACUP_BIN" -h
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Usage: macup"* ]]
+}
+
 @test "macup rejects an unknown argument" {
   run "$MACUP_BIN" --bogus
 
@@ -54,6 +75,32 @@ teardown() {
 
   [ "$status" -eq 0 ]
   grep -q "clone git@github.com:example/dotfiles.git $HOME/.cache/macup/dotfiles-repo" "$MACUP_CALL_LOG"
+}
+
+@test "macup -d overrides DOTFILES_REPO for this run only" {
+  run "$MACUP_BIN" -d git@github.com:example/dotfiles.git dotfiles
+
+  [ "$status" -eq 0 ]
+  grep -q "clone git@github.com:example/dotfiles.git $HOME/.cache/macup/dotfiles-repo" "$MACUP_CALL_LOG"
+}
+
+@test "macup -b overrides EXTRA_BREWFILE for this run only" {
+  echo 'brew "jq"' > "$TEST_HOME/extra.Brewfile"
+
+  run "$MACUP_BIN" -b "$TEST_HOME/extra.Brewfile" homebrew
+
+  [ "$status" -eq 0 ]
+  grep -q "bundle --file=$TEST_HOME/extra.Brewfile" "$MACUP_CALL_LOG"
+}
+
+@test "macup -a runs every module, same as --all" {
+  mkdir -p "$HOME/.oh-my-zsh/custom/themes/powerlevel10k"
+
+  run "$MACUP_BIN" -a
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Running homebrew"* ]]
+  [[ "$output" == *"Running github"* ]]
 }
 
 @test "macup --all runs every module and reports failures without aborting" {
@@ -97,6 +144,14 @@ teardown() {
   grep -q "succeeded: homebrew" "$log_file"
   grep -q "macup run: macup homebrew" "$log_file"
   [[ "$output" == *"Full log: $log_file"* ]]
+}
+
+@test "macup -n is equivalent to --dry-run" {
+  run "$MACUP_BIN" -n homebrew
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Dry run: no changes will be made"* ]]
+  [[ "$output" == *"(dry run — nothing was actually changed)"* ]]
 }
 
 @test "macup --dry-run prints a startup banner and a summary note" {

@@ -1,0 +1,70 @@
+name: release-please
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+
+  update-homebrew-tap:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ needs.release-please.outputs.tag_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Compute release tarball checksum
+        id: checksum
+        run: |
+          curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
+            "https://github.com/dicksonk/macup/archive/refs/tags/${TAG}.tar.gz" -o release.tar.gz
+          echo "sha256=$(shasum -a 256 release.tar.gz | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+      - name: Update packaging/homebrew/macup.rb
+        run: |
+          sed -i \
+            -e "s|url \".*\"|url \"https://github.com/dicksonk/macup/archive/refs/tags/${TAG}.tar.gz\"|" \
+            -e "s|sha256 \".*\"|sha256 \"${{ steps.checksum.outputs.sha256 }}\"|" \
+            packaging/homebrew/macup.rb
+
+      - name: Commit formula update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add packaging/homebrew/macup.rb
+          git commit -m "chore: update packaging/homebrew/macup.rb for ${TAG}"
+          git push
+
+      - name: Push updated formula to homebrew-macup tap
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/dicksonk/homebrew-macup.git" tap
+          cp packaging/homebrew/macup.rb tap/Formula/macup.rb
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/macup.rb
+          if git diff --cached --quiet; then
+            echo "No changes to push"
+          else
+            git commit -m "chore: update macup to ${TAG}"
+            git push
+          fi

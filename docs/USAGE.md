@@ -351,13 +351,14 @@ debugging a run that failed partway through, check the summary's
 
 ## Flag and module reference
 
-| Flag | Effect |
-|---|---|
-| `--all` | Run all five modules, non-interactively |
-| `--dry-run` | Preview actions without making any changes or prompting |
-| `--dotfiles-repo=<url>` | Override `DOTFILES_REPO` for this run only |
-| `--brewfile=<path>` | Override `EXTRA_BREWFILE` for this run only |
-| `--help` | Show usage and exit |
+| Flag | Short | Effect |
+|---|---|---|
+| `--all` | `-a` | Run all five modules, non-interactively |
+| `--dry-run` | `-n` | Preview actions without making any changes or prompting |
+| `--dotfiles-repo=<url>` | `-d <url>` | Override `DOTFILES_REPO` for this run only |
+| `--brewfile=<path>` | `-b <path>` | Override `EXTRA_BREWFILE` for this run only |
+| `--help` | `-h` | Show usage and exit |
+| `--version` | `-v` | Print the installed version and exit |
 
 `--dry-run` combines with any of the above (`--dry-run --all`,
 `--dry-run --dotfiles-repo=... dotfiles`, or bare `--dry-run` for an
