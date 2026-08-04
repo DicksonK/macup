@@ -221,3 +221,38 @@ EOF
   [ ! -f "$TEST_HOME/.config/mac-up/config" ]
   ! grep -q "gum confirm" "$MAC_UP_CALL_LOG"
 }
+
+@test "_redact_secrets masks user:pass@ credentials in an https URL" {
+  run _redact_secrets "https://oauth2:ghp_secrettoken@github.com/user/dotfiles.git"
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "https://[redacted]@github.com/user/dotfiles.git" ]
+}
+
+@test "_redact_secrets masks a bare token@ credential in an https URL" {
+  run _redact_secrets "https://ghp_secrettoken@github.com/user/dotfiles.git"
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "https://[redacted]@github.com/user/dotfiles.git" ]
+}
+
+@test "_redact_secrets leaves a credential-free URL unchanged" {
+  run _redact_secrets "https://github.com/user/dotfiles.git"
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "https://github.com/user/dotfiles.git" ]
+}
+
+@test "_redact_secrets leaves an SSH-style git@host URL unchanged" {
+  run _redact_secrets "git@github.com:user/dotfiles.git"
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "git@github.com:user/dotfiles.git" ]
+}
+
+@test "_redact_secrets masks a credentialed URL embedded in a larger string" {
+  run _redact_secrets "--dotfiles-repo=https://oauth2:ghp_secrettoken@github.com/user/dotfiles.git dotfiles"
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "--dotfiles-repo=https://[redacted]@github.com/user/dotfiles.git dotfiles" ]
+}

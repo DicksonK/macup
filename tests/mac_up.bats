@@ -129,3 +129,13 @@ teardown() {
   [ ! -f "$HOME/.config/mac-up/config" ]
   ! grep -q "gum confirm" "$MAC_UP_CALL_LOG"
 }
+
+@test "mac-up redacts credentials embedded in --dotfiles-repo from the run-header log line" {
+  run "$MAC_UP_BIN" --dotfiles-repo=https://oauth2:ghp_secrettoken@github.com/example/dotfiles.git dotfiles
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"mac-up run: mac-up --dotfiles-repo=https://[redacted]@github.com/example/dotfiles.git dotfiles"* ]]
+  [[ "$output" != *"ghp_secrettoken"* ]]
+  log_file="$(ls "$HOME"/.cache/mac-up/logs/*.log)"
+  ! grep -q "ghp_secrettoken" "$log_file"
+}

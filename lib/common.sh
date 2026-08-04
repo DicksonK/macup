@@ -49,6 +49,10 @@ is_dry_run() {
   [ "${MAC_UP_DRY_RUN:-0}" = "1" ]
 }
 
+_redact_secrets() {
+  printf '%s' "$1" | sed -E 's#(https?://)[^@[:space:]/]+@#\1[redacted]@#g'
+}
+
 dry_run_report() {
   log_info "[dry-run] would $1"
 }

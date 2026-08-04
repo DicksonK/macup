@@ -16,12 +16,12 @@ run_dotfiles() {
       fi
     else
       if is_dry_run; then
-        dry_run_report "clone dotfiles repo $DOTFILES_REPO into $cache_dir"
+        dry_run_report "clone dotfiles repo $(_redact_secrets "$DOTFILES_REPO") into $cache_dir"
       else
-        log_info "Cloning dotfiles repo: $DOTFILES_REPO"
+        log_info "Cloning dotfiles repo: $(_redact_secrets "$DOTFILES_REPO")"
         mkdir -p "$(dirname "$cache_dir")"
         if ! git clone "$DOTFILES_REPO" "$cache_dir"; then
-          log_error "Failed to clone dotfiles repo: $DOTFILES_REPO"
+          log_error "Failed to clone dotfiles repo: $(_redact_secrets "$DOTFILES_REPO")"
           return 1
         fi
       fi

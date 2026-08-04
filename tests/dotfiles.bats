@@ -260,3 +260,35 @@ teardown() {
   [[ "$output" == *"backup $HOME/.zshrc.mac-up-backup already exists"* ]]
   [[ "$output" != *"would prompt to back up and replace $HOME/.zshrc"* ]]
 }
+
+@test "run_dotfiles redacts embedded credentials from DOTFILES_REPO when logging a successful clone" {
+  export DOTFILES_REPO="https://oauth2:ghp_secrettoken@github.com/example/dotfiles.git"
+
+  run run_dotfiles
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"https://[redacted]@github.com/example/dotfiles.git"* ]]
+  [[ "$output" != *"ghp_secrettoken"* ]]
+}
+
+@test "run_dotfiles redacts embedded credentials from DOTFILES_REPO when logging a failed clone" {
+  export DOTFILES_REPO="https://oauth2:ghp_secrettoken@github.com/example/dotfiles.git"
+  export GIT_CLONE_EXIT=1
+
+  run run_dotfiles
+
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"https://[redacted]@github.com/example/dotfiles.git"* ]]
+  [[ "$output" != *"ghp_secrettoken"* ]]
+}
+
+@test "run_dotfiles redacts embedded credentials from DOTFILES_REPO when reporting a dry-run clone" {
+  export DOTFILES_REPO="https://oauth2:ghp_secrettoken@github.com/example/dotfiles.git"
+  export MAC_UP_DRY_RUN=1
+
+  run run_dotfiles
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"https://[redacted]@github.com/example/dotfiles.git"* ]]
+  [[ "$output" != *"ghp_secrettoken"* ]]
+}

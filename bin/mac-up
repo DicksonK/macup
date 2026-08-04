@@ -132,7 +132,7 @@ main() {
   done
 
   init_log_file
-  log_info "mac-up run: mac-up $invocation"
+  log_info "mac-up run: mac-up $(_redact_secrets "$invocation")"
 
   if [ "$run_all" = true ] || [ "${#modules[@]}" -gt 0 ]; then
     MAC_UP_NONINTERACTIVE=1
