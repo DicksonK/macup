@@ -35,11 +35,11 @@ usage() {
 Usage: macup [options] [module...]
 
 Options:
-  --all                     Run all modules, non-interactive
-  --dry-run                 Preview actions without making changes
-  --dotfiles-repo=<url>     Override DOTFILES_REPO for this run
-  --brewfile=<path>         Override EXTRA_BREWFILE for this run
-  --help                    Show this help
+  -a, --all                     Run all modules, non-interactive
+  -n, --dry-run                 Preview actions without making changes
+  -d, --dotfiles-repo=<url>     Override DOTFILES_REPO for this run
+  -b, --brewfile=<path>         Override EXTRA_BREWFILE for this run
+  -h, --help                    Show this help
 
 Modules: homebrew shell dotfiles macos-defaults github
 
@@ -99,21 +99,29 @@ main() {
 
   while [ $# -gt 0 ]; do
     case "$1" in
-      --help)
+      -h|--help)
         usage
         exit 0
         ;;
-      --all)
+      -a|--all)
         run_all=true
         shift
         ;;
-      --dry-run)
+      -n|--dry-run)
         dry_run=true
         shift
+        ;;
+      -d|--dotfiles-repo)
+        cli_dotfiles_repo="${2:-}"
+        shift 2
         ;;
       --dotfiles-repo=*)
         cli_dotfiles_repo="${1#--dotfiles-repo=}"
         shift
+        ;;
+      -b|--brewfile)
+        cli_brewfile="${2:-}"
+        shift 2
         ;;
       --brewfile=*)
         cli_brewfile="${1#--brewfile=}"
