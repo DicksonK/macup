@@ -117,7 +117,12 @@ main() {
         shift
         ;;
       -d|--dotfiles-repo)
-        cli_dotfiles_repo="${2:-}"
+        if [ $# -lt 2 ]; then
+          log_error "--dotfiles-repo requires a value"
+          usage
+          exit 1
+        fi
+        cli_dotfiles_repo="$2"
         shift 2
         ;;
       --dotfiles-repo=*)
@@ -125,7 +130,12 @@ main() {
         shift
         ;;
       -b|--brewfile)
-        cli_brewfile="${2:-}"
+        if [ $# -lt 2 ]; then
+          log_error "--brewfile requires a value"
+          usage
+          exit 1
+        fi
+        cli_brewfile="$2"
         shift 2
         ;;
       --brewfile=*)

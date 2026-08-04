@@ -93,6 +93,20 @@ teardown() {
   grep -q "bundle --file=$TEST_HOME/extra.Brewfile" "$MACUP_CALL_LOG"
 }
 
+@test "macup -d with no value prints an error instead of exiting silently" {
+  run "$MACUP_BIN" -d
+
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"--dotfiles-repo requires a value"* ]]
+}
+
+@test "macup -b with no value prints an error instead of exiting silently" {
+  run "$MACUP_BIN" -b
+
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"--brewfile requires a value"* ]]
+}
+
 @test "macup -a runs every module, same as --all" {
   mkdir -p "$HOME/.oh-my-zsh/custom/themes/powerlevel10k"
 
