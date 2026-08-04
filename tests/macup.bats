@@ -33,6 +33,20 @@ teardown() {
   [[ "$output" == *"Usage: macup"* ]]
 }
 
+@test "macup --version prints the VERSION file contents and exits 0" {
+  run "$MACUP_BIN" --version
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "macup $(cat "$ROOT_DIR/VERSION")" ]
+}
+
+@test "macup -v is a shorthand for --version" {
+  run "$MACUP_BIN" -v
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "macup $(cat "$ROOT_DIR/VERSION")" ]
+}
+
 @test "macup -h prints usage and exits 0" {
   run "$MACUP_BIN" -h
 

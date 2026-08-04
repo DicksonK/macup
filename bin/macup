@@ -39,6 +39,7 @@ Options:
   -n, --dry-run                 Preview actions without making changes
   -d, --dotfiles-repo=<url>     Override DOTFILES_REPO for this run
   -b, --brewfile=<path>         Override EXTRA_BREWFILE for this run
+  -v, --version                 Print the installed version and exit
   -h, --help                    Show this help
 
 Modules: homebrew shell dotfiles macos-defaults github
@@ -101,6 +102,10 @@ main() {
     case "$1" in
       -h|--help)
         usage
+        exit 0
+        ;;
+      -v|--version)
+        echo "macup $(cat "$ROOT_DIR/VERSION")"
         exit 0
         ;;
       -a|--all)
