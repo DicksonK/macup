@@ -185,6 +185,7 @@ main() {
   fi
 
   if [ "${#modules[@]}" -eq 0 ]; then
+    ui_banner
     modules=()
     while IFS= read -r line; do
       [ -n "$line" ] && modules+=("$line")

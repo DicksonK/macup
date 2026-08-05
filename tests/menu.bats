@@ -76,3 +76,22 @@ dotfiles: Symlink dotfiles into \$HOME"
   run ui_log_step "Running homebrew"
   [[ "$output" == *"Running homebrew"* ]]
 }
+
+@test "ui_banner prints a bordered box with the title and current version" {
+  run ui_banner
+
+  [ "$status" -eq 0 ]
+  grep -q -- "--border rounded" "$MACUP_CALL_LOG"
+  [[ "$output" == *"macup"* ]]
+  [[ "$output" == *"$(cat "$ROOT_DIR/VERSION")"* ]]
+}
+
+@test "ui_choose_modules uses the macup accent color" {
+  export GUM_CHOOSE_RESULT="homebrew: Install Homebrew packages"
+
+  run ui_choose_modules
+
+  [ "$status" -eq 0 ]
+  grep -q -- "--cursor.foreground 212" "$MACUP_CALL_LOG"
+  grep -q -- "--selected.foreground 212" "$MACUP_CALL_LOG"
+}
