@@ -121,6 +121,24 @@ ZSH_DISABLE_COMPFIX=true
 
 source $ZSH/oh-my-zsh.sh
 
+# zsh-uv-env: report which Python got activated/deactivated
+_macup_uv_env_on_activate() {
+    echo "🐍 venv activated: $(python --version 2>&1)"
+}
+
+_macup_uv_env_on_deactivate() {
+    echo "🐍 venv deactivated"
+}
+
+if (( $+functions[zsh_uv_add_post_hook_on_activate] )); then
+    zsh_uv_add_post_hook_on_activate '_macup_uv_env_on_activate'
+    zsh_uv_add_post_hook_on_deactivate '_macup_uv_env_on_deactivate'
+    # The plugin auto-activates a venv (if the shell starts inside one)
+    # during its own load, before the registration above runs — so
+    # that first activation never fires the hook. Cover it explicitly.
+    [[ -n "$VIRTUAL_ENV" ]] && _macup_uv_env_on_activate
+fi
+
 # Source ~/environment recursively for files ending with *.rc *.zsh *.sh
 if [[ -d "$HOME/environment" ]]; then
   for file in $(find -L $HOME/environment -type f \( -name "*.rc" -o -name "*.zsh" -o -name "*.sh" \) | sort ); do

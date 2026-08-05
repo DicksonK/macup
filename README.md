@@ -128,6 +128,10 @@ be verified by hand on a real or VM Mac before a release:
       --with-token` completes with a PAT, and the key auto-uploaded
       via `gh ssh-key add` actually shows up under
       https://github.com/settings/keys.
+- [ ] `cd` into a directory with a `uv`-created `.venv` prints the
+      activation message with the Python version, `cd` out prints the
+      deactivation message, and a shell started already inside such a
+      directory also prints the activation message on startup.
 
 ## Cutting a release
 
