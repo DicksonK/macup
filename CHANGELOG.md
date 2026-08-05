@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/DicksonK/macup/compare/v0.2.1...v0.2.2) (2026-08-05)
+
+
+### Bug Fixes
+
+* show space/enter usage hint on the module checklist ([a798c97](https://github.com/DicksonK/macup/commit/a798c972690e98e7faf6f6d79a0687dd64b38b63))
+
 ## [0.2.1](https://github.com/DicksonK/macup/compare/v0.2.0...v0.2.1) (2026-08-04)
 
 
