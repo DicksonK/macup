@@ -149,6 +149,24 @@ teardown() {
   [[ "$output" == *"Running homebrew"* ]]
 }
 
+@test "macup shows the banner before the interactive checklist" {
+  export GUM_CHOOSE_RESULT="homebrew: Install Homebrew packages"
+
+  run "$MACUP_BIN"
+
+  [ "$status" -eq 0 ]
+  grep -q -- "--border rounded" "$MACUP_CALL_LOG"
+}
+
+@test "macup --all does not show the banner" {
+  mkdir -p "$HOME/.oh-my-zsh/custom/themes/powerlevel10k"
+
+  run "$MACUP_BIN" --all
+
+  [ "$status" -eq 0 ]
+  ! grep -q -- "--border rounded" "$MACUP_CALL_LOG"
+}
+
 @test "macup creates a per-run log file and reports its path in the summary" {
   run "$MACUP_BIN" homebrew
 
