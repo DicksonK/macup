@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.0](https://github.com/DicksonK/macup/compare/v0.3.0...v0.4.0) (2026-08-05)
+
+
+### Features
+
+* add bordered banner and accent styling to interactive checklist ([6d1d474](https://github.com/DicksonK/macup/commit/6d1d474e6d482cb1126cd1b100f6fb9fb903703c))
+* add bordered banner and accent styling to interactive checklist ([4e56744](https://github.com/DicksonK/macup/commit/4e56744b68cf293438a6a3792285eb1ad347c313))
+
 ## [0.3.0](https://github.com/DicksonK/macup/compare/v0.2.2...v0.3.0) (2026-08-05)
 
 
