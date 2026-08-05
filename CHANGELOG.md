@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.0](https://github.com/DicksonK/macup/compare/v0.2.2...v0.3.0) (2026-08-05)
+
+
+### Features
+
+* report Python version on zsh-uv-env activate/deactivate ([c415326](https://github.com/DicksonK/macup/commit/c4153268b6ae797d915505f24a51a5d9b9f842fd))
+* report Python version on zsh-uv-env activate/deactivate ([6ac0312](https://github.com/DicksonK/macup/commit/6ac0312e6cd7129aeb9739646ddc9ab63b4b1903))
+
+
+### Bug Fixes
+
+* guard zsh-uv-env hooks and cover already-active venv on shell start ([7341247](https://github.com/DicksonK/macup/commit/734124774dc9024d0deb991ca01276815a67bda8))
+
 ## [0.2.2](https://github.com/DicksonK/macup/compare/v0.2.1...v0.2.2) (2026-08-05)
 
 
