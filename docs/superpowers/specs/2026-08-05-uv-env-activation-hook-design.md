@@ -52,3 +52,12 @@ No automated test added (see Non-Goals). Manual verification: `cd` into
 a directory containing a `uv`-created `.venv`, confirm the activation
 message prints with the venv's Python version; `cd` out, confirm the
 deactivation message prints.
+
+## Known Limitations
+
+- `cd`ing directly from one venv directory into a different venv
+  directory (not via a non-venv directory in between) does not print
+  the deactivation message for the old venv — only the new activation
+  message prints. This is existing `zsh-uv-env` plugin behavior (its
+  internal venv-switch path doesn't call its deactivate-hooks path),
+  not something introduced or fixable here; see Non-Goals.

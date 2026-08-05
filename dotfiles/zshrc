@@ -130,8 +130,14 @@ _macup_uv_env_on_deactivate() {
     echo "🐍 venv deactivated"
 }
 
-zsh_uv_add_post_hook_on_activate '_macup_uv_env_on_activate'
-zsh_uv_add_post_hook_on_deactivate '_macup_uv_env_on_deactivate'
+if (( $+functions[zsh_uv_add_post_hook_on_activate] )); then
+    zsh_uv_add_post_hook_on_activate '_macup_uv_env_on_activate'
+    zsh_uv_add_post_hook_on_deactivate '_macup_uv_env_on_deactivate'
+    # The plugin auto-activates a venv (if the shell starts inside one)
+    # during its own load, before the registration above runs — so
+    # that first activation never fires the hook. Cover it explicitly.
+    [[ -n "$VIRTUAL_ENV" ]] && _macup_uv_env_on_activate
+fi
 
 # Source ~/environment recursively for files ending with *.rc *.zsh *.sh
 if [[ -d "$HOME/environment" ]]; then
