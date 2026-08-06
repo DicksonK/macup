@@ -71,17 +71,19 @@ _configure_terminal_font() {
     return 0
   fi
 
-  local current_font
-  current_font="$(osascript -e 'tell application "Terminal" to get font name of default settings' 2>/dev/null || true)"
-  if [ "$current_font" = "$font_ps_name" ]; then
-    log_info "Terminal.app font already set to $font_family, skipping"
-  elif is_dry_run; then
+  if is_dry_run; then
     dry_run_report "set Terminal.app's default font to $font_family"
   else
-    if osascript -e "tell application \"Terminal\" to set font name of default settings to \"$font_family\"" >/dev/null 2>&1; then
-      log_info "Set Terminal.app font to $font_family"
+    local current_font
+    current_font="$(osascript -e 'tell application "Terminal" to get font name of default settings' 2>/dev/null || true)"
+    if [ "$current_font" = "$font_ps_name" ]; then
+      log_info "Terminal.app font already set to $font_family, skipping"
     else
-      log_warn "Failed to set Terminal.app font (may need Automation permission in System Settings > Privacy & Security)"
+      if osascript -e "tell application \"Terminal\" to set font name of default settings to \"$font_family\"" >/dev/null 2>&1; then
+        log_info "Set Terminal.app font to $font_family"
+      else
+        log_warn "Failed to set Terminal.app font (may need Automation permission in System Settings > Privacy & Security)"
+      fi
     fi
   fi
 

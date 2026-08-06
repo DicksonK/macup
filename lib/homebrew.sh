@@ -18,8 +18,11 @@ _untrusted_brewfile_taps() {
   )
 
   local t
+  if [ "${#taps[@]}" -eq 0 ]; then
+    return 0
+  fi
   for t in "${taps[@]}"; do
-    if [ -f "$trust_file" ] && grep -q "\"$t\"" "$trust_file" 2>/dev/null; then
+    if [ -f "$trust_file" ] && grep -qF "\"$t\"" "$trust_file" 2>/dev/null; then
       continue
     fi
     printf '%s\n' "$t"
@@ -44,7 +47,7 @@ _trust_brewfile_taps() {
   fi
 
   if [ "${MACUP_NONINTERACTIVE:-0}" = "1" ]; then
-    log_warn "Taps not trusted; brew bundle may skip formulae/casks from: ${untrusted[*]}"
+    log_warn "Taps not trusted (non-interactive run); re-run macup interactively to trust: ${untrusted[*]}"
     return 0
   fi
 
