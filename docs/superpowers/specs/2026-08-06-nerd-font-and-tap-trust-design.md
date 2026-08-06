@@ -245,16 +245,19 @@ comment doesn't need to live in the Brewfile itself (Brewfiles aren't
 meant to carry prose); it lives here and in the implementation's
 commit message.
 
-**Why one confirm prompt, not silent auto-trust, and not skipped under
-`--all`:** matches this codebase's existing precedent for essential
-first-time setup with no safe default (`lib/dotfiles.sh`'s git-identity
-prompt runs regardless of `MACUP_NONINTERACTIVE`) — unlike the
-config-creation prompt in `lib/common.sh`, which is genuinely optional
-and skipped non-interactively. Trusting the taps your own Brewfile
-declares is a precondition for the tool doing its actual job under
-`--all`, not an optional convenience — so it always prompts once, then
-is silently skipped on every later run once trusted (idempotent, via the
-`trust.json` check).
+**Why one confirm prompt in interactive mode, but skipped (with a
+warning) under `--all`/`MACUP_NONINTERACTIVE`:** `--all` is explicitly
+documented as "non-interactive" in both `bin/macup --help` and the
+README — a `gum confirm` call under a truly scripted/non-tty `--all`
+invocation could hang indefinitely waiting for input that will never
+arrive. (An earlier draft of this spec argued for prompting regardless
+of `MACUP_NONINTERACTIVE`, reasoning by analogy to `lib/dotfiles.sh`'s
+git-identity prompt — that reasoning didn't hold up against `--all`'s
+actual documented contract, and was corrected during implementation;
+see the plan's Global Constraints.) In interactive mode it still prompts
+once per untrusted tap set; on every later run, already-trusted taps are
+silently excluded (idempotent, via the `trust.json` check) regardless of
+mode.
 
 ## Testing
 

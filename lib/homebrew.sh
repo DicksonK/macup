@@ -3,6 +3,65 @@
 : "${MACUP_BREW_PATH_APPLE_SILICON:=/opt/homebrew/bin/brew}"
 : "${MACUP_BREW_PATH_INTEL:=/usr/local/bin/brew}"
 
+_untrusted_brewfile_taps() {
+  local trust_file="$HOME/.homebrew/trust.json"
+  [ -n "${XDG_CONFIG_HOME:-}" ] && trust_file="$XDG_CONFIG_HOME/homebrew/trust.json"
+
+  local -a taps=()
+  local tap
+  while IFS= read -r tap; do
+    [ -n "$tap" ] && taps+=("$tap")
+  done < <(
+    grep -ohE '^tap[[:space:]]+"[^"]+"' "$ROOT_DIR/Brewfile" "${EXTRA_BREWFILE:-/dev/null}" 2>/dev/null \
+      | sed -E 's/^tap[[:space:]]+"([^"]+)"/\1/' \
+      | sort -u
+  )
+
+  local t
+  for t in "${taps[@]}"; do
+    if [ -f "$trust_file" ] && grep -q "\"$t\"" "$trust_file" 2>/dev/null; then
+      continue
+    fi
+    printf '%s\n' "$t"
+  done
+}
+
+_trust_brewfile_taps() {
+  local brew_bin="$1"
+  local -a untrusted=()
+  local t
+  while IFS= read -r t; do
+    [ -n "$t" ] && untrusted+=("$t")
+  done < <(_untrusted_brewfile_taps)
+
+  if [ "${#untrusted[@]}" -eq 0 ]; then
+    return 0
+  fi
+
+  if is_dry_run; then
+    dry_run_report "trust Homebrew tap(s): ${untrusted[*]}"
+    return 0
+  fi
+
+  if [ "${MACUP_NONINTERACTIVE:-0}" = "1" ]; then
+    log_warn "Taps not trusted; brew bundle may skip formulae/casks from: ${untrusted[*]}"
+    return 0
+  fi
+
+  if ! ui_confirm "Trust ${#untrusted[@]} Homebrew tap(s) required by your Brewfile: ${untrusted[*]}?"; then
+    log_warn "Taps not trusted; brew bundle may skip formulae/casks from: ${untrusted[*]}"
+    return 0
+  fi
+
+  for t in "${untrusted[@]}"; do
+    if "$brew_bin" tap "$t" && "$brew_bin" trust --tap "$t"; then
+      log_info "Trusted tap $t"
+    else
+      log_warn "Failed to trust tap $t"
+    fi
+  done
+}
+
 run_homebrew() {
   local brew_bin=""
   if [ -x "$MACUP_BREW_PATH_APPLE_SILICON" ]; then
@@ -27,6 +86,8 @@ run_homebrew() {
       fi
     fi
   fi
+
+  _trust_brewfile_taps "$brew_bin"
 
   if is_dry_run; then
     dry_run_report "run: brew bundle --file=$ROOT_DIR/Brewfile"
