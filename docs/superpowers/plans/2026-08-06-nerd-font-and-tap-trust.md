@@ -11,6 +11,7 @@
 ## Global Constraints
 
 - Font family for Terminal.app: `MesloLGS Nerd Font Mono` (verified registered name — not `MesloLGS NF`). PostScript name of the regular weight: `MesloLGSNFM-Regular` (verified via `fc-scan`, does not match the `.ttf` filename convention — do not guess this from the filename).
+- `_configure_terminal_font` checks the font is actually installed before doing anything — `[ -f "$HOME/Library/Fonts/MesloLGSNerdFontMono-Regular.ttf" ] || [ -f "/Library/Fonts/MesloLGSNerdFontMono-Regular.ttf" ]` (the `.ttf` filename this time, which does match Homebrew's cask install layout — confirmed via `find`, distinct from the PostScript name above). If missing, `log_warn` and return early — do not use `fc-list`/`fc-scan` for this check; those come from Homebrew's `fontconfig` package, not guaranteed present on a fresh Mac.
 - iTerm2's default profile is never rewritten directly (the live prefs plist has runtime-assigned GUIDs in an array — too fragile to patch safely). Use a Dynamic Profile JSON at `$HOME/Library/Application Support/iTerm2/DynamicProfiles/macup.json` with fixed GUID `B2F4C9F0-5C1A-4E9B-9F2C-6D6B1F1A9C10`, plus `defaults write com.googlecode.iterm2 "Default Bookmark Guid" -string <that GUID>`.
 - iTerm2 presence is checked via `$MACUP_ITERM_APP_PATH` (default `/Applications/iTerm.app`), a new override variable following the existing `MACUP_BREW_PATH_APPLE_SILICON`-style pattern so it's testable.
 - Font-configuration failures are non-fatal (`log_warn`, continue) — this is cosmetic polish, not core functionality.
@@ -66,14 +67,45 @@ setup() {
 
 - [ ] **Step 2: Write the failing tests**
 
-In `tests/shell.bats`, add these tests (after the existing tests, before the final closing of the file):
+In `tests/shell.bats`, add an `install_stub_font` helper function (after
+`setup()`/`teardown()`, before the first `@test`, matching the existing
+`install_stub_brew`-style helper convention used in `tests/homebrew.bats`):
 
 ```bash
+install_stub_font() {
+  mkdir -p "$HOME/Library/Fonts"
+  touch "$HOME/Library/Fonts/MesloLGSNerdFontMono-Regular.ttf"
+}
+```
+
+Then add these tests (after the existing tests, before the final closing
+of the file). Every test that expects `_configure_terminal_font` to get
+past the new font-existence check calls `install_stub_font` first; the
+one new "not installed" test deliberately does not:
+
+```bash
+@test "run_shell warns and skips font config when the Nerd Font isn't installed" {
+  mkdir -p "$HOME/.oh-my-zsh/custom/themes/powerlevel10k"
+  mkdir -p "$HOME/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
+  mkdir -p "$HOME/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting"
+  mkdir -p "$HOME/.oh-my-zsh/custom/plugins/zsh-uv-env"
+  export MACUP_ITERM_APP_PATH="$TEST_HOME/iTerm.app"
+  mkdir -p "$MACUP_ITERM_APP_PATH"
+
+  run run_shell
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"MesloLGS Nerd Font Mono not installed; run the homebrew module first, then re-run shell"* ]]
+  [ ! -f "$MACUP_CALL_LOG" ] || ! grep -q "osascript" "$MACUP_CALL_LOG"
+  [ ! -f "$HOME/Library/Application Support/iTerm2/DynamicProfiles/macup.json" ]
+}
+
 @test "run_shell reports Nerd Font config in dry-run mode when iTerm2 is present" {
   mkdir -p "$HOME/.oh-my-zsh/custom/themes/powerlevel10k"
   mkdir -p "$HOME/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
   mkdir -p "$HOME/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting"
   mkdir -p "$HOME/.oh-my-zsh/custom/plugins/zsh-uv-env"
+  install_stub_font
   export MACUP_ITERM_APP_PATH="$TEST_HOME/iTerm.app"
   mkdir -p "$MACUP_ITERM_APP_PATH"
   export MACUP_DRY_RUN=1
@@ -90,6 +122,7 @@ In `tests/shell.bats`, add these tests (after the existing tests, before the fin
   mkdir -p "$HOME/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
   mkdir -p "$HOME/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting"
   mkdir -p "$HOME/.oh-my-zsh/custom/plugins/zsh-uv-env"
+  install_stub_font
   export MACUP_ITERM_APP_PATH="$TEST_HOME/no-such-iterm.app"
   export MACUP_DRY_RUN=1
 
@@ -105,6 +138,7 @@ In `tests/shell.bats`, add these tests (after the existing tests, before the fin
   mkdir -p "$HOME/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
   mkdir -p "$HOME/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting"
   mkdir -p "$HOME/.oh-my-zsh/custom/plugins/zsh-uv-env"
+  install_stub_font
   export MACUP_ITERM_APP_PATH="$TEST_HOME/no-such-iterm.app"
   export OSASCRIPT_RESULT="MesloLGSNFM-Regular"
 
@@ -120,6 +154,7 @@ In `tests/shell.bats`, add these tests (after the existing tests, before the fin
   mkdir -p "$HOME/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
   mkdir -p "$HOME/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting"
   mkdir -p "$HOME/.oh-my-zsh/custom/plugins/zsh-uv-env"
+  install_stub_font
   export MACUP_ITERM_APP_PATH="$TEST_HOME/iTerm.app"
   mkdir -p "$MACUP_ITERM_APP_PATH"
 
@@ -130,7 +165,7 @@ In `tests/shell.bats`, add these tests (after the existing tests, before the fin
   grep -q 'set font name of default settings to "MesloLGS Nerd Font Mono"' "$MACUP_CALL_LOG"
   [ -f "$HOME/Library/Application Support/iTerm2/DynamicProfiles/macup.json" ]
   grep -q "MesloLGSNFM-Regular" "$HOME/Library/Application Support/iTerm2/DynamicProfiles/macup.json"
-  grep -q 'defaults write com.googlecode.iterm2 "Default Bookmark Guid" B2F4C9F0-5C1A-4E9B-9F2C-6D6B1F1A9C10' "$MACUP_CALL_LOG"
+  grep -q 'defaults write com.googlecode.iterm2 Default Bookmark Guid B2F4C9F0-5C1A-4E9B-9F2C-6D6B1F1A9C10' "$MACUP_CALL_LOG"
   [[ "$output" == *"Created iTerm2 dynamic profile with MesloLGS Nerd Font Mono and set as default"* ]]
 }
 
@@ -139,6 +174,7 @@ In `tests/shell.bats`, add these tests (after the existing tests, before the fin
   mkdir -p "$HOME/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
   mkdir -p "$HOME/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting"
   mkdir -p "$HOME/.oh-my-zsh/custom/plugins/zsh-uv-env"
+  install_stub_font
   export MACUP_ITERM_APP_PATH="$TEST_HOME/iTerm.app"
   mkdir -p "$MACUP_ITERM_APP_PATH"
   echo "com.googlecode.iterm2|Default Bookmark Guid|B2F4C9F0-5C1A-4E9B-9F2C-6D6B1F1A9C10" >> "$DEFAULTS_STORE"
@@ -151,14 +187,20 @@ In `tests/shell.bats`, add these tests (after the existing tests, before the fin
 }
 ```
 
-Note: the last test writes directly into `$DEFAULTS_STORE` using the same
-`domain|key|value` format the `tests/test_helper/stubs/defaults` stub
-reads/writes (see that file for the exact format) — this is why `setup()`
-was updated in Step 1 to export it.
+Note: this test file's `grep -q 'defaults write com.googlecode.iterm2
+Default Bookmark Guid ...'` assertions have no quotes around the
+multi-word key — the `defaults` stub logs `$key` unquoted (verified
+directly against the stub's actual behavior, not guessed).
+
+Note: the second-to-last test writes directly into `$DEFAULTS_STORE`
+using the same `domain|key|value` format the
+`tests/test_helper/stubs/defaults` stub reads/writes (see that file for
+the exact format) — this is why `setup()` was updated in Step 1 to
+export it.
 
 - [ ] **Step 3: Run the new tests to verify they fail**
 
-Run: `bats tests/shell.bats -f "Nerd Font\|Terminal.app\|iTerm2"`
+Run: `bats tests/shell.bats -f "Nerd Font|Terminal.app|iTerm2"`
 Expected: FAIL — `_configure_terminal_font` doesn't exist yet, `MACUP_ITERM_APP_PATH` isn't read anywhere, no `osascript`/dynamic-profile logic exists in `lib/shell.sh` yet.
 
 - [ ] **Step 4: Implement `_configure_terminal_font` in `lib/shell.sh`**
@@ -181,7 +223,13 @@ Replace the end of `lib/shell.sh` (currently lines 55-57: the blank line, `retur
 _configure_terminal_font() {
   local font_family="MesloLGS Nerd Font Mono"
   local font_ps_name="MesloLGSNFM-Regular"
+  local font_file="MesloLGSNerdFontMono-Regular.ttf"
   local iterm_guid="B2F4C9F0-5C1A-4E9B-9F2C-6D6B1F1A9C10"
+
+  if [ ! -f "$HOME/Library/Fonts/$font_file" ] && [ ! -f "/Library/Fonts/$font_file" ]; then
+    log_warn "$font_family not installed; run the homebrew module first, then re-run shell"
+    return 0
+  fi
 
   local current_font
   current_font="$(osascript -e 'tell application "Terminal" to get font name of default settings' 2>/dev/null || true)"
@@ -237,8 +285,8 @@ reordering existing code.)
 
 - [ ] **Step 5: Run the new tests to verify they pass**
 
-Run: `bats tests/shell.bats -f "Nerd Font\|Terminal.app\|iTerm2"`
-Expected: PASS (5 tests)
+Run: `bats tests/shell.bats -f "Nerd Font|Terminal.app|iTerm2"`
+Expected: PASS (6 tests)
 
 - [ ] **Step 6: Add the README manual verification checklist item**
 
@@ -256,7 +304,7 @@ before the `## Cutting a release` heading, add:
 
 - [ ] **Step 7: Run the full suite and shellcheck to check for regressions**
 
-Run: `bats tests/` — expected: all tests pass (123 existing + 5 new = 128)
+Run: `bats tests/` — expected: all tests pass (123 existing + 6 new = 129)
 Run: `shellcheck bin/macup lib/*.sh` — expected: no output
 
 - [ ] **Step 8: Commit**
@@ -432,7 +480,7 @@ Expected: PASS (5 tests)
 
 - [ ] **Step 5: Run the full suite and shellcheck to check for regressions**
 
-Run: `bats tests/` — expected: all tests pass (128 from Task 1 + 5 new = 133)
+Run: `bats tests/` — expected: all tests pass (129 from Task 1 + 5 new = 134)
 Run: `shellcheck bin/macup lib/*.sh` — expected: no output
 
 - [ ] **Step 6: Commit**

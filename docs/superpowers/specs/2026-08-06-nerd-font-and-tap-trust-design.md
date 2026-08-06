@@ -69,7 +69,13 @@ Verified facts (checked directly on a real machine with the Brewfile's
 _configure_terminal_font() {
   local font_family="MesloLGS Nerd Font Mono"
   local font_ps_name="MesloLGSNFM-Regular"
+  local font_file="MesloLGSNerdFontMono-Regular.ttf"
   local iterm_guid="B2F4C9F0-5C1A-4E9B-9F2C-6D6B1F1A9C10"
+
+  if [ ! -f "$HOME/Library/Fonts/$font_file" ] && [ ! -f "/Library/Fonts/$font_file" ]; then
+    log_warn "$font_family not installed; run the homebrew module first, then re-run shell"
+    return 0
+  fi
 
   local current_font
   current_font="$(osascript -e 'tell application "Terminal" to get font name of default settings' 2>/dev/null || true)"
@@ -121,6 +127,23 @@ Called at the end of `run_shell`, after all existing plugin-clone steps
 doesn't actually depend on their install succeeding, so it always runs
 (matches this function's non-fatal philosophy: even if a plugin clone
 failed, still try to fix the font).
+
+**Why a font-existence check before doing anything, and why a file check
+instead of `fc-list`/`fc-scan`:** the Brewfile installs the Nerd Font
+cask, and under `macup --all` the `homebrew` module always runs before
+`shell` (fixed order in `bin/macup`'s `ALL_MODULES`), so in the common
+case the font is already there by the time this runs. But modules can
+also be run individually (`macup shell` alone), and `brew bundle` can
+fail — so this can't be assumed. Rather than silently setting a font
+name that doesn't exist (Terminal.app/iTerm2 would likely just fall back
+to their previous/default font with no explanation of why), check for
+the font file directly and warn clearly if it's missing. `fc-list`/
+`fc-scan` (used only for this spec's own verification research, never
+for something the shipped script depends on) come from Homebrew's
+`fontconfig` package — not guaranteed present on the fresh, unbootstrapped
+Mac this tool exists to set up. A direct file check under
+`~/Library/Fonts`/`/Library/Fonts` (where Homebrew's font casks install)
+has no such dependency.
 
 **Why a Dynamic Profile + `Default Bookmark Guid` pointer, not a direct
 rewrite of iTerm2's live default profile:** iTerm2's actual default
