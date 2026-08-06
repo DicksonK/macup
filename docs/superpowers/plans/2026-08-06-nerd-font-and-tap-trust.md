@@ -328,7 +328,29 @@ git commit -m "feat: set Nerd Font as Terminal.app/iTerm2 default for Powerlevel
 
 - [ ] **Step 1: Write the failing tests**
 
-In `tests/homebrew.bats`, add these tests (the real `$ROOT_DIR/Brewfile`
+First, in `tests/homebrew.bats`'s `setup()`, add `unset XDG_CONFIG_HOME`
+right after `macup_test_setup` (defensive: `_untrusted_brewfile_taps`
+respects `$XDG_CONFIG_HOME` if set, and the new tests assume the
+`$HOME/.homebrew/trust.json` fallback path — this guards against the
+test-running environment happening to have `XDG_CONFIG_HOME` set to
+something else):
+
+```bash
+setup() {
+  load 'test_helper/load'
+  macup_test_setup
+  unset XDG_CONFIG_HOME
+
+  MACUP_BREW_PATH_APPLE_SILICON="$TEST_HOME/brew-apple"
+  MACUP_BREW_PATH_INTEL="$TEST_HOME/brew-intel"
+  export MACUP_BREW_PATH_APPLE_SILICON MACUP_BREW_PATH_INTEL
+
+  source "$ROOT_DIR/lib/common.sh"
+  source "$ROOT_DIR/lib/homebrew.sh"
+}
+```
+
+Then add these tests (the real `$ROOT_DIR/Brewfile`
 already declares `tap "databricks/tap"`, `tap "homebrew/autoupdate"`, and
 `tap "martido/homebrew-graph"` — these tests rely on that real content,
 matching how existing tests in this file already assert against the
