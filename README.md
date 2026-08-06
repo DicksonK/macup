@@ -132,6 +132,11 @@ be verified by hand on a real or VM Mac before a release:
       activation message with the Python version, `cd` out prints the
       deactivation message, and a shell started already inside such a
       directory also prints the activation message on startup.
+- [ ] Running `macup shell` sets Terminal.app's default font to MesloLGS
+      Nerd Font Mono (may prompt for Automation permission in System
+      Settings the first time) and, if iTerm2 is installed, creates an
+      iTerm2 dynamic profile with that font and makes it the default —
+      Powerlevel10k icons should render correctly afterward in both.
 
 ## Cutting a release
 
