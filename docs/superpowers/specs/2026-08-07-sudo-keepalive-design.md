@@ -29,14 +29,14 @@ that don't need `sudo` at all.
 
 ```bash
 _start_sudo_keepalive() {
-  ( while true; do sudo -n true 2>/dev/null; sleep 60; kill -0 "$$" 2>/dev/null || exit; done ) &
+  ( while true; do sudo -n true 2>/dev/null; sleep 60; kill -0 "$$" 2>/dev/null || exit; done ) >/dev/null 2>&1 &
   echo $!
 }
 
 _stop_sudo_keepalive() {
   local pid="$1"
   [ -n "$pid" ] && kill "$pid" 2>/dev/null
-  wait "$pid" 2>/dev/null
+  wait "$pid" 2>/dev/null || true
 }
 ```
 
@@ -51,9 +51,25 @@ _stop_sudo_keepalive() {
   ever dies without running `_stop_sudo_keepalive` (crash, kill -9),
   the loop notices within 60s and exits on its own rather than
   lingering forever.
-- `_stop_sudo_keepalive` both kills and `wait`s the PID, so the shell
-  doesn't print a stray "Terminated" job-control message after the
-  script's own output.
+- **`>/dev/null 2>&1` on the subshell is required, not cosmetic.**
+  `_start_sudo_keepalive` is always called via `$(...)` (see the wiring
+  below), and command substitution doesn't return until every process
+  holding its stdout pipe's write end closes it. Without the redirect,
+  the backgrounded infinite loop inherits and holds that pipe open
+  forever, so `sudo_keepalive_pid="$(_start_sudo_keepalive)"` hangs
+  indefinitely — verified directly (a minimal repro hung; `ps` showed
+  the loop still running, reparented to PID 1, minutes later; redirecting
+  its output fixed it immediately).
+- **`wait "$pid" || true` is required, not optional cleanup.** Because
+  the keepalive is started from inside a command-substitution subshell,
+  the backgrounded loop is a *grandchild* of the caller, not a direct
+  child — and bash's `wait` builtin can only wait on direct children.
+  Waiting on a non-child returns exit status 127 every time (confirmed
+  via `ps` showing the process's real parent is PID 1, not the caller).
+  Under `set -e` (active in `bin/macup` and in bats test bodies), an
+  unguarded `wait` here would abort immediately after a successful
+  `kill -0` check. `|| true` makes it the best-effort reap it was always
+  meant to be, without depending on `wait` actually succeeding.
 
 ### `lib/homebrew.sh`: wiring into `run_homebrew`
 
@@ -65,16 +81,33 @@ tap-trust step and both `brew bundle` calls that follow):
   local sudo_keepalive_pid=""
   if ! is_dry_run; then
     sudo_keepalive_pid="$(_start_sudo_keepalive)"
-    trap '_stop_sudo_keepalive "$sudo_keepalive_pid"' RETURN
+    trap '_stop_sudo_keepalive "$sudo_keepalive_pid"; trap - RETURN' RETURN
   fi
 ```
 
-A function-scoped `trap ... RETURN` fires whenever `run_homebrew`
-returns — success, the early `return 1` after a failed Homebrew
-install, or the early `return 1` after a failed default-Brewfile
+A `trap ... RETURN` set inside a bash function fires whenever
+`run_homebrew` returns — success, the early `return 1` after a failed
+Homebrew install, or the early `return 1` after a failed default-Brewfile
 bundle — so cleanup happens on every exit path without duplicating a
-kill call at each `return`. No existing `trap` usage anywhere else in
-this codebase to conflict with.
+kill call at each `return`.
+
+**`trap - RETURN` at the end of the trap body is required, not
+cosmetic — this was the most serious bug found during implementation.**
+A `RETURN` trap in bash is *not* automatically scoped to the function
+that set it: it stays registered in the shell for the rest of the
+script's life and re-fires on **every subsequent function return**,
+anywhere. Once `run_homebrew` itself returns and the trap fires once
+(correctly), the very next function to return anywhere later in
+`bin/macup` re-triggers the *same* trap — but by then
+`sudo_keepalive_pid` (a `local` belonging to the already-finished
+`run_homebrew`) is out of scope, and referencing it under `bin/macup`'s
+`set -u` aborts the entire script with `sudo_keepalive_pid: unbound
+variable`. Verified directly: running `bin/macup homebrew` end-to-end
+reproduced exactly this crash, and it caused 7 `tests/macup.bats`
+failures (every test that calls a function returning after
+`run_homebrew` does) until the self-clearing `trap - RETURN` was added.
+No existing `trap` usage anywhere else in this codebase to conflict
+with.
 
 Dry-run mode never starts the loop — there's no real install happening
 to need a cached credential for.

@@ -175,3 +175,24 @@ EOF
   ! grep -q "trust --tap" "$MACUP_CALL_LOG"
   grep -q "bundle --file=$ROOT_DIR/Brewfile" "$MACUP_CALL_LOG"
 }
+
+@test "_start_sudo_keepalive starts a background process that _stop_sudo_keepalive can stop" {
+  pid="$(_start_sudo_keepalive)"
+
+  kill -0 "$pid"
+
+  _stop_sudo_keepalive "$pid"
+
+  run kill -0 "$pid"
+  [ "$status" -ne 0 ]
+}
+
+@test "run_homebrew does not start the sudo keepalive in dry-run mode" {
+  install_stub_brew
+  export MACUP_DRY_RUN=1
+
+  run run_homebrew
+
+  [ "$status" -eq 0 ]
+  [ ! -f "$MACUP_CALL_LOG" ] || ! grep -q "^sudo " "$MACUP_CALL_LOG"
+}

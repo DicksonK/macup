@@ -3,6 +3,17 @@
 : "${MACUP_BREW_PATH_APPLE_SILICON:=/opt/homebrew/bin/brew}"
 : "${MACUP_BREW_PATH_INTEL:=/usr/local/bin/brew}"
 
+_start_sudo_keepalive() {
+  ( while true; do sudo -n true 2>/dev/null; sleep 60; kill -0 "$$" 2>/dev/null || exit; done ) >/dev/null 2>&1 &
+  echo $!
+}
+
+_stop_sudo_keepalive() {
+  local pid="$1"
+  [ -n "$pid" ] && kill "$pid" 2>/dev/null
+  wait "$pid" 2>/dev/null || true
+}
+
 _untrusted_brewfile_taps() {
   local trust_file="$HOME/.homebrew/trust.json"
   [ -n "${XDG_CONFIG_HOME:-}" ] && trust_file="$XDG_CONFIG_HOME/homebrew/trust.json"
@@ -88,6 +99,12 @@ run_homebrew() {
         brew_bin="$MACUP_BREW_PATH_INTEL"
       fi
     fi
+  fi
+
+  local sudo_keepalive_pid=""
+  if ! is_dry_run; then
+    sudo_keepalive_pid="$(_start_sudo_keepalive)"
+    trap '_stop_sudo_keepalive "$sudo_keepalive_pid"; trap - RETURN' RETURN
   fi
 
   _trust_brewfile_taps "$brew_bin"

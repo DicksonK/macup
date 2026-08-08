@@ -4,7 +4,7 @@
 
 **Goal:** Prevent `sudo` credential expiry from prompting for the same password more than once during a long `brew bundle` run, without ever forcing an upfront password prompt for Brewfiles that don't need `sudo` at all.
 
-**Architecture:** A background subshell loop in `lib/homebrew.sh` (`_start_sudo_keepalive`/`_stop_sudo_keepalive`), started/stopped around `run_homebrew`'s real (non-dry-run) work via a function-scoped `trap ... RETURN`.
+**Architecture:** A background subshell loop in `lib/homebrew.sh` (`_start_sudo_keepalive`/`_stop_sudo_keepalive`), started/stopped around `run_homebrew`'s real (non-dry-run) work via a self-clearing `trap ... RETURN`.
 
 **Tech Stack:** bash, `sudo -n`, bats (existing stub-based test infra).
 
@@ -12,7 +12,9 @@
 
 - Never call `sudo -v` or otherwise force a password prompt — only `sudo -n true` (non-interactive, refreshes an already-cached credential, silently no-ops if nothing is cached).
 - The keepalive only runs during real (non-dry-run) execution — dry-run mode never starts it.
-- Cleanup uses a function-scoped `trap ... RETURN` in `run_homebrew` so it fires on every exit path (success or either of the two early `return 1`s), not a manual kill duplicated at each return site.
+- Cleanup uses `trap '_stop_sudo_keepalive "$sudo_keepalive_pid"; trap - RETURN' RETURN` in `run_homebrew`. The `trap - RETURN` self-clear is required, not optional: a `RETURN` trap in bash is NOT scoped to the function that set it — it re-fires on every later function return anywhere in the script. Without clearing it, the very next function to return anywhere in `bin/macup` after `run_homebrew` re-triggers the same trap, referencing `run_homebrew`'s now-out-of-scope `local sudo_keepalive_pid` and crashing under `set -u`. (Discovered during implementation via live reproduction — see the design spec.)
+- `_start_sudo_keepalive`'s subshell must redirect its own stdout/stderr (`>/dev/null 2>&1`) — it's always invoked via `$(...)`, and an unredirected background loop holds that command substitution's pipe open forever, hanging the caller indefinitely.
+- `_stop_sudo_keepalive`'s `wait "$pid"` must be followed by `|| true` — the backgrounded loop is a grandchild of the caller (forked from the command-substitution subshell), and bash's `wait` can only target direct children; an unguarded `wait` on a non-child fails and aborts under `set -e`.
 - `$$` inside the `( ... ) &` subshell refers to the parent `macup` process (bash does not rebind `$$` in subshells) — this is what makes `kill -0 "$$" || exit` a correct self-termination check if the parent ever dies without calling `_stop_sudo_keepalive`.
 
 ---
@@ -79,16 +81,22 @@ After the two existing `: "${MACUP_BREW_PATH_...}"` lines (currently lines 3-4) 
 
 ```bash
 _start_sudo_keepalive() {
-  ( while true; do sudo -n true 2>/dev/null; sleep 60; kill -0 "$$" 2>/dev/null || exit; done ) &
+  ( while true; do sudo -n true 2>/dev/null; sleep 60; kill -0 "$$" 2>/dev/null || exit; done ) >/dev/null 2>&1 &
   echo $!
 }
 
 _stop_sudo_keepalive() {
   local pid="$1"
   [ -n "$pid" ] && kill "$pid" 2>/dev/null
-  wait "$pid" 2>/dev/null
+  wait "$pid" 2>/dev/null || true
 }
 ```
+
+(`>/dev/null 2>&1` on the subshell and `|| true` on `wait` are both
+required for correctness, not style — see the design spec's rationale.
+Omitting the redirect makes `$(_start_sudo_keepalive)` hang forever;
+omitting `|| true` makes `_stop_sudo_keepalive` abort under `set -e`
+since `wait` can't target a non-child PID.)
 
 Then in `run_homebrew`, immediately before the existing `_trust_brewfile_taps "$brew_bin"` line (currently line 93), add:
 
@@ -96,10 +104,17 @@ Then in `run_homebrew`, immediately before the existing `_trust_brewfile_taps "$
   local sudo_keepalive_pid=""
   if ! is_dry_run; then
     sudo_keepalive_pid="$(_start_sudo_keepalive)"
-    trap '_stop_sudo_keepalive "$sudo_keepalive_pid"' RETURN
+    trap '_stop_sudo_keepalive "$sudo_keepalive_pid"; trap - RETURN' RETURN
   fi
 
 ```
+
+(The trap clears itself via `trap - RETURN` after firing. This is
+required: a `RETURN` trap set inside a function is not scoped to that
+function in bash — left unguarded, it re-fires on every later function
+return anywhere in `bin/macup`, referencing the now-out-of-scope
+`sudo_keepalive_pid` and crashing the whole script under `set -u`. See
+the design spec for the full explanation and reproduction.)
 
 (blank line after, before the existing `_trust_brewfile_taps "$brew_bin"` call — no other changes to that line or anything after it).
 
