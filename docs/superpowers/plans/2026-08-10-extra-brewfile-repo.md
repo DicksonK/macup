@@ -105,10 +105,10 @@ In `tests/homebrew.bats`, add these tests (after the existing tests, before the 
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"would update the Brewfile repo cache"* ]]
-  ! grep -q "pull" "$MACUP_CALL_LOG"
 
   result="$(_resolve_extra_brewfile 2>/dev/null)"
   [ "$result" = "$HOME/.cache/macup/brewfile-repo/Brewfile" ]
+  ! grep -q "pull" "$MACUP_CALL_LOG"
 }
 
 @test "_resolve_extra_brewfile redacts embedded credentials when logging a clone" {
@@ -209,7 +209,7 @@ _resolve_extra_brewfile() {
       dry_run_report "update the Brewfile repo cache at $cache_dir" >&2
     else
       log_info "Updating Brewfile repo cache" >&2
-      if ! git -C "$cache_dir" pull --ff-only; then
+      if ! git -C "$cache_dir" pull --ff-only >&2; then
         log_warn "Failed to update Brewfile repo cache, using existing checkout"
       fi
     fi
@@ -220,7 +220,7 @@ _resolve_extra_brewfile() {
     fi
     log_info "Cloning Brewfile repo: $(_redact_secrets "$EXTRA_BREWFILE_REPO")" >&2
     mkdir -p "$(dirname "$cache_dir")"
-    if ! git clone "$EXTRA_BREWFILE_REPO" "$cache_dir"; then
+    if ! git clone "$EXTRA_BREWFILE_REPO" "$cache_dir" >&2; then
       log_error "Failed to clone Brewfile repo: $(_redact_secrets "$EXTRA_BREWFILE_REPO")"
       return 1
     fi
@@ -492,11 +492,23 @@ In `run_homebrew`, find the existing bundled-Brewfile block (the one Task 1 left
 Then, immediately before the existing `if [ -n "${EXTRA_BREWFILE:-}" ]; then` block (the extra-Brewfile bundle block, untouched by this task otherwise), add the sanity warning:
 
 ```bash
-  if [ "${MACUP_BREWFILE_ONLY:-0}" = "1" ] && [ -z "${EXTRA_BREWFILE:-}" ]; then
+  if [ "${MACUP_BREWFILE_ONLY:-0}" = "1" ] && [ -z "${EXTRA_BREWFILE:-}" ] && [ -z "${EXTRA_BREWFILE_REPO:-}" ]; then
     log_warn "--brewfile-only set but no extra Brewfile configured (EXTRA_BREWFILE/EXTRA_BREWFILE_REPO); nothing to bundle"
   fi
 
 ```
+
+**Corrected during final review — checks both `EXTRA_BREWFILE` and
+`EXTRA_BREWFILE_REPO`, not just `EXTRA_BREWFILE`.** `EXTRA_BREWFILE`
+here is the *resolved* value (post-`_resolve_extra_brewfile`), which is
+deliberately empty in dry-run mode when `EXTRA_BREWFILE_REPO` is set but
+not yet cloned (an intentional, separate "can't preview" behavior).
+Checking only the resolved value meant this warning could fire even
+though the user HAD configured a repo — producing a self-contradicting
+"would clone ... " immediately followed by "nothing configured".
+`EXTRA_BREWFILE_REPO` itself is never shadowed by resolution, so
+checking it directly here correctly distinguishes "genuinely nothing
+configured" from "configured a repo, just not cloneable-to-preview yet".
 
 - [ ] **Step 4: Add the `-bo|--brewfile-only` flag to `bin/macup`**
 

@@ -45,7 +45,7 @@ _resolve_extra_brewfile() {
       dry_run_report "update the Brewfile repo cache at $cache_dir" >&2
     else
       log_info "Updating Brewfile repo cache" >&2
-      if ! git -C "$cache_dir" pull --ff-only; then
+      if ! git -C "$cache_dir" pull --ff-only >&2; then
         log_warn "Failed to update Brewfile repo cache, using existing checkout"
       fi
     fi
@@ -56,7 +56,7 @@ _resolve_extra_brewfile() {
     fi
     log_info "Cloning Brewfile repo: $(_redact_secrets "$EXTRA_BREWFILE_REPO")" >&2
     mkdir -p "$(dirname "$cache_dir")"
-    if ! git clone "$EXTRA_BREWFILE_REPO" "$cache_dir"; then
+    if ! git clone "$EXTRA_BREWFILE_REPO" "$cache_dir" >&2; then
       log_error "Failed to clone Brewfile repo: $(_redact_secrets "$EXTRA_BREWFILE_REPO")"
       return 1
     fi
@@ -79,6 +79,18 @@ Brewfile repo: ..." would get concatenated into `$EXTRA_BREWFILE`
 itself, corrupting the very path `run_homebrew` needs — the user-facing
 message must stay visible on the terminal (stderr still displays
 normally), it just must not be part of the captured stdout value.
+
+**The same rule applies to the two `git` invocations, not just macup's
+own log helpers — found the hard way, during final review, not in
+initial implementation.** `git pull --ff-only` writes to stdout (e.g.
+"Already up to date."), so without `>&2` on that call too, every run
+after the first (once the "pull" branch is taken instead of "clone")
+would have that git output prepended into the resolved path, silently
+corrupting it. `git clone` happens to be stderr-only in practice, but
+that isn't a documented guarantee — it's redirected the same way for
+defense in depth. The general lesson: *any* command invoked inside a
+value-returning function must have its stdout accounted for, not just
+this codebase's own logging functions.
 
 - Mirrors `lib/dotfiles.sh`'s `DOTFILES_REPO` clone/pull block exactly
   (same cache-dir-exists check, same `git pull --ff-only` /
