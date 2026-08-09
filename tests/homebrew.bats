@@ -264,10 +264,10 @@ EOF
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"would update the Brewfile repo cache"* ]]
-  ! grep -q "pull" "$MACUP_CALL_LOG"
 
   result="$(_resolve_extra_brewfile 2>/dev/null)"
   [ "$result" = "$HOME/.cache/macup/brewfile-repo/Brewfile" ]
+  ! grep -q "pull" "$MACUP_CALL_LOG"
 }
 
 @test "_resolve_extra_brewfile redacts embedded credentials when logging a clone" {
@@ -288,6 +288,16 @@ EOF
   # the real macup log file are expected to be redacted -- see
   # tests/macup.bats's "redacts credentials ... from the run-header log
   # line" test for that coverage.
+}
+
+@test "_resolve_extra_brewfile returns a clean path with no stray output when pulling" {
+  export EXTRA_BREWFILE_REPO="git@github.com:example/my-brewfiles.git"
+  mkdir -p "$HOME/.cache/macup/brewfile-repo/.git"
+
+  result="$(_resolve_extra_brewfile 2>/dev/null)"
+
+  [ "$result" = "$HOME/.cache/macup/brewfile-repo/Brewfile" ]
+  [ "$(printf '%s' "$result" | wc -l)" -eq 0 ]
 }
 
 @test "run_homebrew trusts taps declared in a cloned extra Brewfile" {
@@ -343,4 +353,16 @@ EOF
   [ "$status" -eq 0 ]
   [[ "$output" == *"--brewfile-only set but no extra Brewfile configured"* ]]
   ! grep -q "bundle --file=$ROOT_DIR/Brewfile" "$MACUP_CALL_LOG"
+}
+
+@test "run_homebrew does not warn about nothing to bundle when EXTRA_BREWFILE_REPO is configured but not yet cloned in dry-run" {
+  install_stub_brew
+  export EXTRA_BREWFILE_REPO="git@github.com:example/my-brewfiles.git"
+  export MACUP_DRY_RUN=1
+  export MACUP_BREWFILE_ONLY=1
+
+  run run_homebrew
+
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"nothing to bundle"* ]]
 }

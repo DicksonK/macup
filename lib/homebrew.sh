@@ -15,7 +15,7 @@ _resolve_extra_brewfile() {
       dry_run_report "update the Brewfile repo cache at $cache_dir" >&2
     else
       log_info "Updating Brewfile repo cache" >&2
-      if ! git -C "$cache_dir" pull --ff-only; then
+      if ! git -C "$cache_dir" pull --ff-only >&2; then
         log_warn "Failed to update Brewfile repo cache, using existing checkout"
       fi
     fi
@@ -26,7 +26,7 @@ _resolve_extra_brewfile() {
     fi
     log_info "Cloning Brewfile repo: $(_redact_secrets "$EXTRA_BREWFILE_REPO")" >&2
     mkdir -p "$(dirname "$cache_dir")"
-    if ! git clone "$EXTRA_BREWFILE_REPO" "$cache_dir"; then
+    if ! git clone "$EXTRA_BREWFILE_REPO" "$cache_dir" >&2; then
       log_error "Failed to clone Brewfile repo: $(_redact_secrets "$EXTRA_BREWFILE_REPO")"
       return 1
     fi
@@ -162,7 +162,7 @@ run_homebrew() {
     fi
   fi
 
-  if [ "${MACUP_BREWFILE_ONLY:-0}" = "1" ] && [ -z "${EXTRA_BREWFILE:-}" ]; then
+  if [ "${MACUP_BREWFILE_ONLY:-0}" = "1" ] && [ -z "${EXTRA_BREWFILE:-}" ] && [ -z "${EXTRA_BREWFILE_REPO:-}" ]; then
     log_warn "--brewfile-only set but no extra Brewfile configured (EXTRA_BREWFILE/EXTRA_BREWFILE_REPO); nothing to bundle"
   fi
 
