@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+echo "sudo $*" >> "${MACUP_CALL_LOG:-/dev/null}"
+exit "${SUDO_EXIT:-0}"

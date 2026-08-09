@@ -107,6 +107,20 @@ teardown() {
   [[ "$output" == *"--brewfile requires a value"* ]]
 }
 
+@test "macup -br overrides EXTRA_BREWFILE_REPO for this run only" {
+  run "$MACUP_BIN" -br git@github.com:example/my-brewfiles.git --dry-run homebrew
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"clone Brewfile repo git@github.com:example/my-brewfiles.git"* ]]
+}
+
+@test "macup -br with no value prints an error instead of exiting silently" {
+  run "$MACUP_BIN" -br
+
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"--brewfile-repo requires a value"* ]]
+}
+
 @test "macup -a runs every module, same as --all" {
   mkdir -p "$HOME/.oh-my-zsh/custom/themes/powerlevel10k"
 
@@ -186,6 +200,17 @@ teardown() {
   [[ "$output" == *"(dry run — nothing was actually changed)"* ]]
 }
 
+@test "macup -bo sets MACUP_BREWFILE_ONLY and skips the bundled Brewfile" {
+  export EXTRA_BREWFILE="$TEST_HOME/extra.Brewfile"
+  echo 'brew "jq"' > "$EXTRA_BREWFILE"
+
+  run "$MACUP_BIN" -bo homebrew
+
+  [ "$status" -eq 0 ]
+  grep -q "bundle --file=$EXTRA_BREWFILE" "$MACUP_CALL_LOG"
+  ! grep -q "bundle --file=$ROOT_DIR/Brewfile" "$MACUP_CALL_LOG"
+}
+
 @test "macup --dry-run prints a startup banner and a summary note" {
   run "$MACUP_BIN" --dry-run homebrew
 
@@ -225,4 +250,12 @@ teardown() {
   [[ "$output" != *"ghp_secrettoken"* ]]
   log_file="$(ls "$HOME"/.cache/macup/logs/*.log)"
   ! grep -q "ghp_secrettoken" "$log_file"
+}
+
+@test "macup redacts credentials embedded in --brewfile-repo from the run-header log line" {
+  run "$MACUP_BIN" --brewfile-repo=https://oauth2:ghp_secrettoken@github.com/example/my-brewfiles.git dotfiles
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"macup run: macup --brewfile-repo=https://[redacted]@github.com/example/my-brewfiles.git dotfiles"* ]]
+  [[ "$output" != *"ghp_secrettoken"* ]]
 }

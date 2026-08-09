@@ -64,6 +64,7 @@ load_config() {
 
   DOTFILES_REPO="${DOTFILES_REPO:-}"
   EXTRA_BREWFILE="${EXTRA_BREWFILE:-}"
+  EXTRA_BREWFILE_REPO="${EXTRA_BREWFILE_REPO:-}"
 
   if [ ! -f "$config_file" ]; then
     if [ "${MACUP_NONINTERACTIVE:-0}" = "1" ]; then

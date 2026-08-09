@@ -8,3 +8,9 @@
 
 # Path to an additional Brewfile to run after the bundled Brewfile.
 #EXTRA_BREWFILE=
+
+# Git URL of a repo containing an additional Brewfile, cloned into
+# ~/.cache/macup/brewfile-repo. When set, EXTRA_BREWFILE (above) is
+# the relative path to the Brewfile *within that repo* instead of a
+# local path — defaults to "Brewfile" at the repo's root if left blank.
+#EXTRA_BREWFILE_REPO=

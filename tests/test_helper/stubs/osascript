@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+echo "osascript $*" >> "${MACUP_CALL_LOG:-/dev/null}"
+case "$*" in
+  *"get font name"*)
+    printf '%s\n' "${OSASCRIPT_RESULT:-}"
+    ;;
+esac
+exit "${OSASCRIPT_EXIT:-0}"
