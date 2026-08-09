@@ -1,6 +1,21 @@
 [include]
 	path = ~/.gitconfig.local  # per-machine user.name/user.email, written by macup
 
+[alias]
+	# List available aliases
+    aliases = !git config --get-regexp alias | sed -re 's/alias\\.(\\S*)\\s(.*)$/\\1 = \\2/g'
+    # Command shortcuts
+    ci = commit
+    co = checkout
+    st = status
+    pushd = push -u origin HEAD
+    # Undo 
+    unadd = reset
+    # Edit last commit message
+    reword = commit --amend
+    # Undo last commit but keep changed files in stage
+    uncommit = reset --soft HEAD~1
+
 [core]
     autocrlf = input  # keep newlines as in input
     compression = 9  # trade cpu for network
@@ -27,6 +42,11 @@
 [log]
     abbrevCommit = true  # short commits
     graphColors = blue,yellow,cyan,magenta,green,red
+
+[merge]
+  # Disable fast-forward merges as default merge strategy.
+  # Force explicit call of `git merge --ff …`.
+  ff = false
 
 [status]  # richer status output
     branch = true

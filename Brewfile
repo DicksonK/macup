@@ -4,7 +4,6 @@
 # Essential: TAP
 # ======================================
 # essential_start_marker
-tap "databricks/tap"
 tap "homebrew/autoupdate"
 tap "martido/homebrew-graph"
 # ======================================
@@ -17,9 +16,8 @@ brew "bash"
 brew "bat"
 brew "ca-certificates"
 brew "certifi"
-brew "coreutils"            # added for CBT
+brew "coreutils"
 brew "curl"
-brew "databricks"
 brew "fd"
 brew "fzf"
 brew "gcc" || true
@@ -35,9 +33,8 @@ brew "neovim"
 brew "ninja"
 brew "node"
 brew "openjdk@11"
-brew "pandoc"
 brew "pre-commit"
-brew "python@3.10"           # add seperate python env for databricks
+brew "python@3.10"
 brew "python@3.11"
 brew "python@3.12"
 brew "python@3.13"
@@ -60,19 +57,17 @@ brew "z"
 # Essential: cask
 # ======================================
 # essential_cask_start_marker
-cask "citrix-workspace" || true
+cask "alfred"
+cask "arc"
 cask "drawio" || true
 cask "font-hack-nerd-font"
 cask "font-meslo-lg-nerd-font"
 # cask "google-chrome" || true
 cask "iterm2" || true
 cask "miro" || true
-cask "odbc-manager" || true
+cask "notion"
 cask "rectangle"
-cask "rstudio"
-cask "slack"
 cask "sublime-text" || true
-# cask "tableau" || true
 # essential_cask_end_marker
 # ======================================
 # VS CODE
@@ -80,6 +75,7 @@ cask "sublime-text" || true
 # vscode_start_marker
 cask "visual-studio-code" || true
 # vscode_extension
+vscode "donjayamanne.githistory"
 vscode "donjayamanne.python-environment-manager"
 vscode "dorzey.vscode-sqlfluff"
 vscode "eamodio.gitlens"
