@@ -2,19 +2,21 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Let a user point their extra Brewfile at a git repo (cloned/pulled automatically, same lifecycle as `DOTFILES_REPO`) instead of only a plain local file path.
+**Goal:** Let a user point their extra Brewfile at a git repo (cloned/pulled automatically, same lifecycle as `DOTFILES_REPO`) instead of only a plain local file path, and let them opt into running *only* the extra Brewfile for a given invocation instead of always stacking it on top of the bundled one.
 
-**Architecture:** A new `_resolve_extra_brewfile` helper in `lib/homebrew.sh` handles the clone/pull and returns the effective file path; `run_homebrew` shadows its `EXTRA_BREWFILE` local with that resolved value once, early, so every existing consumer of `$EXTRA_BREWFILE` (tap-trust extraction, the bundle-execution block) picks it up with zero other changes. `bin/macup` gets a new `-br|--brewfile-repo=<url>` flag mirroring the existing `-d|--dotfiles-repo`.
+**Architecture:** A new `_resolve_extra_brewfile` helper in `lib/homebrew.sh` handles the clone/pull and returns the effective file path; `run_homebrew` shadows its `EXTRA_BREWFILE` local with that resolved value once, early, so every existing consumer of `$EXTRA_BREWFILE` (tap-trust extraction, the bundle-execution block) picks it up with zero other changes (Task 1). A new `--brewfile-only`/`-bo` session flag, exported as `MACUP_BREWFILE_ONLY` (mirroring `--dry-run`/`MACUP_DRY_RUN`'s existing pattern), skips the bundled-Brewfile bundle call when set (Task 2). `bin/macup` gets two new flags: `-br|--brewfile-repo=<url>` (mirroring `-d|--dotfiles-repo`) and `-bo|--brewfile-only` (mirroring `-n|--dry-run`).
 
 **Tech Stack:** bash, `git`, bats (existing stub-based test infra — the existing `tests/test_helper/stubs/git` stub already handles `clone`/generic subcommands correctly, no stub changes needed).
 
 ## Global Constraints
 
-- Fully backward compatible: when `EXTRA_BREWFILE_REPO` is unset, `EXTRA_BREWFILE` behaves exactly as it does today (a plain local path) — `_resolve_extra_brewfile` must pass it through unchanged in that case.
+- Fully backward compatible: when `EXTRA_BREWFILE_REPO` is unset, `EXTRA_BREWFILE` behaves exactly as it does today (a plain local path) — `_resolve_extra_brewfile` must pass it through unchanged in that case. Likewise, when `--brewfile-only` is not passed, both bundle calls run exactly as today.
 - When `EXTRA_BREWFILE_REPO` is set, `EXTRA_BREWFILE` is reinterpreted as the relative path within the cloned repo to the Brewfile, defaulting to `Brewfile` (repo root) if `EXTRA_BREWFILE` itself is unset.
 - Clone/pull lifecycle mirrors `lib/dotfiles.sh`'s `DOTFILES_REPO` handling exactly: cache dir `~/.cache/macup/brewfile-repo`, `git -C "$cache_dir" pull --ff-only` if `.git` already exists there (falling back to `log_warn` + using the existing checkout on failure, not aborting), `git clone` otherwise. Credentials embedded in the URL are redacted via the existing `_redact_secrets` helper before any log line.
 - In `--dry-run` mode, if the repo hasn't been cloned yet, `_resolve_extra_brewfile` reports the clone intent and returns an empty string (can't preview an unfetched repo's contents — same accepted limitation `DOTFILES_REPO` already has). If the repo is already cached from a prior real run, dry-run resolves and previews the real path normally.
 - `_resolve_extra_brewfile`'s shadowing (`local EXTRA_BREWFILE; EXTRA_BREWFILE="$(_resolve_extra_brewfile)" || return 1` inside `run_homebrew`) must happen before `_trust_brewfile_taps` is called and before the existing extra-Brewfile bundle block — both already read `$EXTRA_BREWFILE` as an ordinary variable and need no other changes.
+- `--brewfile-only` is a session-only flag (like `--all`/`--dry-run`), not a persisted `macup.conf.example` config var — "skip the bundled Brewfile just this once" is a per-invocation choice, not something that should silently stick across future runs via a saved config file.
+- `--brewfile-only` does NOT change tap-trust scanning — `_untrusted_brewfile_taps` keeps scanning both the bundled and extra Brewfiles regardless, since trusting an unused tap is harmless and scoping it would add complexity for no correctness benefit. Do not touch `_untrusted_brewfile_taps`/`_trust_brewfile_taps` in Task 2.
 
 ---
 
@@ -340,4 +342,172 @@ Run: `shellcheck bin/macup lib/*.sh` — expected: no output
 ```bash
 git add lib/homebrew.sh lib/common.sh bin/macup macup.conf.example README.md tests/homebrew.bats tests/macup.bats
 git commit -m "feat: support a git-repo-backed extra Brewfile"
+```
+
+---
+
+### Task 2: `--brewfile-only`/`-bo` flag
+
+Depends on Task 1 being complete (this task's file references assume
+Task 1's flag-parsing cases and `_resolve_extra_brewfile` wiring already
+exist).
+
+**Files:**
+- Modify: `lib/homebrew.sh` (`run_homebrew` — wrap the existing bundled-Brewfile block, add the "nothing to bundle" warning)
+- Modify: `bin/macup` (`usage()`, `main()` — new `-bo|--brewfile-only` flag, `MACUP_BREWFILE_ONLY` export mirroring `MACUP_DRY_RUN`)
+- Test: `tests/homebrew.bats`, `tests/macup.bats`
+
+**Interfaces:**
+- Consumes: `$MACUP_BREWFILE_ONLY` (set by `bin/macup`, read by `lib/homebrew.sh`) — same pattern as the existing `$MACUP_DRY_RUN`/`is_dry_run`.
+
+- [ ] **Step 1: Write the failing tests**
+
+In `tests/homebrew.bats`, add these tests (after the tests Task 1 added):
+
+```bash
+@test "run_homebrew skips the bundled Brewfile when MACUP_BREWFILE_ONLY is set" {
+  install_stub_brew
+  export EXTRA_BREWFILE="$TEST_HOME/extra.Brewfile"
+  echo 'brew "jq"' > "$EXTRA_BREWFILE"
+  export MACUP_BREWFILE_ONLY=1
+
+  run run_homebrew
+
+  [ "$status" -eq 0 ]
+  ! grep -q "bundle --file=$ROOT_DIR/Brewfile" "$MACUP_CALL_LOG"
+  grep -q "bundle --file=$EXTRA_BREWFILE" "$MACUP_CALL_LOG"
+}
+
+@test "run_homebrew runs both Brewfiles when MACUP_BREWFILE_ONLY is not set" {
+  install_stub_brew
+  export EXTRA_BREWFILE="$TEST_HOME/extra.Brewfile"
+  echo 'brew "jq"' > "$EXTRA_BREWFILE"
+
+  run run_homebrew
+
+  [ "$status" -eq 0 ]
+  grep -q "bundle --file=$ROOT_DIR/Brewfile" "$MACUP_CALL_LOG"
+  grep -q "bundle --file=$EXTRA_BREWFILE" "$MACUP_CALL_LOG"
+}
+
+@test "run_homebrew warns when MACUP_BREWFILE_ONLY is set but no extra Brewfile is configured" {
+  install_stub_brew
+  export MACUP_BREWFILE_ONLY=1
+
+  run run_homebrew
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"--brewfile-only set but no extra Brewfile configured"* ]]
+  ! grep -q "bundle --file=$ROOT_DIR/Brewfile" "$MACUP_CALL_LOG"
+}
+```
+
+In `tests/macup.bats`, add this test (near the existing `-n|--dry-run` tests):
+
+```bash
+@test "macup -bo sets MACUP_BREWFILE_ONLY and skips the bundled Brewfile" {
+  export EXTRA_BREWFILE="$TEST_HOME/extra.Brewfile"
+  echo 'brew "jq"' > "$EXTRA_BREWFILE"
+
+  run "$MACUP_BIN" -bo homebrew
+
+  [ "$status" -eq 0 ]
+  ! grep -q "bundle --file=$ROOT_DIR/Brewfile" "$MACUP_CALL_LOG"
+  grep -q "bundle --file=$EXTRA_BREWFILE" "$MACUP_CALL_LOG"
+}
+```
+
+- [ ] **Step 2: Run the new tests to verify they fail**
+
+Run: `bats tests/homebrew.bats -f "MACUP_BREWFILE_ONLY"`
+Run: `bats tests/macup.bats -f "\-bo"`
+Expected: FAIL — `MACUP_BREWFILE_ONLY` isn't read anywhere yet, `-bo` isn't a recognized flag yet.
+
+- [ ] **Step 3: Wrap the bundled-Brewfile block in `lib/homebrew.sh`**
+
+In `run_homebrew`, find the existing bundled-Brewfile block (the one Task 1 left untouched, starting with `if is_dry_run; then` / `dry_run_report "run: brew bundle --file=$ROOT_DIR/Brewfile"` and ending with its matching `fi`, immediately followed by the `if [ -n "${EXTRA_BREWFILE:-}" ]; then` block). Wrap it in a new outer condition:
+
+```bash
+  if [ "${MACUP_BREWFILE_ONLY:-0}" != "1" ]; then
+    if is_dry_run; then
+      dry_run_report "run: brew bundle --file=$ROOT_DIR/Brewfile"
+    else
+      log_info "Running brew bundle with default Brewfile"
+      if ! "$brew_bin" bundle --file="$ROOT_DIR/Brewfile"; then
+        log_error "brew bundle failed for default Brewfile"
+        return 1
+      fi
+    fi
+  fi
+```
+
+(Just add the new `if [ "${MACUP_BREWFILE_ONLY:-0}" != "1" ]; then` / `fi` wrapper around the existing block's contents — don't change anything inside it.)
+
+Then, immediately before the existing `if [ -n "${EXTRA_BREWFILE:-}" ]; then` block (the extra-Brewfile bundle block, untouched by this task otherwise), add the sanity warning:
+
+```bash
+  if [ "${MACUP_BREWFILE_ONLY:-0}" = "1" ] && [ -z "${EXTRA_BREWFILE:-}" ]; then
+    log_warn "--brewfile-only set but no extra Brewfile configured (EXTRA_BREWFILE/EXTRA_BREWFILE_REPO); nothing to bundle"
+  fi
+
+```
+
+- [ ] **Step 4: Add the `-bo|--brewfile-only` flag to `bin/macup`**
+
+In `usage()`, add a line after the `-br, --brewfile-repo=<url>` line Task 1 added:
+
+```
+  -bo, --brewfile-only          Skip the bundled Brewfile, run only the extra one
+```
+
+(Exactly 10 spaces between `-only` and `Skip` — verified programmatically to put the description at column 32, matching every other line in this block.)
+
+In `main()`, add a new `local brewfile_only=false` line alongside the existing `local dry_run=false` line.
+
+Add a new case arm alongside the existing `-n|--dry-run)` case:
+
+```bash
+      -bo|--brewfile-only)
+        brewfile_only=true
+        shift
+        ;;
+```
+
+Add the export, mirroring the existing `MACUP_DRY_RUN` export block exactly (same location, right after it):
+
+```bash
+  if [ "$brewfile_only" = true ]; then
+    MACUP_BREWFILE_ONLY=1
+  else
+    MACUP_BREWFILE_ONLY=0
+  fi
+  export MACUP_BREWFILE_ONLY
+```
+
+- [ ] **Step 5: Run the new tests to verify they pass**
+
+Run: `bats tests/homebrew.bats -f "MACUP_BREWFILE_ONLY"`
+Run: `bats tests/macup.bats -f "\-bo"`
+Expected: PASS (3 tests in homebrew.bats, 1 in macup.bats)
+
+- [ ] **Step 6: Update `README.md`**
+
+In `README.md`'s `Usage` section, add a line after the `macup --brewfile-repo=<url> homebrew` example Task 1 added:
+
+```sh
+macup --brewfile-only homebrew    # run only the extra Brewfile, skip the bundled one
+```
+
+Add a short sentence to the `Configuration` section (near the `EXTRA_BREWFILE_REPO` paragraph Task 1 added) noting that `--brewfile-only`/`-bo` skips the bundled Brewfile for that run only — it's not a persisted config setting.
+
+- [ ] **Step 7: Run the full suite and shellcheck to check for regressions**
+
+Run: `bats tests/` — expected: all tests pass (149 from Task 1 + 4 new = 153)
+Run: `shellcheck bin/macup lib/*.sh` — expected: no output
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add lib/homebrew.sh bin/macup README.md tests/homebrew.bats tests/macup.bats
+git commit -m "feat: add --brewfile-only to skip the bundled Brewfile"
 ```

@@ -13,8 +13,10 @@ automatically instead of maintaining a local file by hand.
 
 ## Non-Goals
 
-- Does not change the bundled `$ROOT_DIR/Brewfile`'s behavior at all —
-  it always runs first, unconditionally, exactly as today.
+- Does not change the bundled `$ROOT_DIR/Brewfile`'s *default* behavior
+  — it still always runs first, unconditionally, exactly as today,
+  unless the new `--brewfile-only` flag explicitly opts out for that run
+  (see Design below).
 - Does not remove or change existing `EXTRA_BREWFILE`-as-local-path
   behavior — when `EXTRA_BREWFILE_REPO` is unset, `EXTRA_BREWFILE`
   behaves identically to how it does today. Fully backward compatible.
@@ -128,6 +130,58 @@ and the `--brewfile-repo=<url>` form), setting a new
 `cli_brewfile_repo` local that overrides `EXTRA_BREWFILE_REPO` for that
 run only — same pattern as `cli_dotfiles_repo`/`cli_brewfile` today.
 
+### `bin/macup` + `lib/homebrew.sh`: new `--brewfile-only`/`-bo` flag
+
+By default, the extra Brewfile always *stacks* on top of the bundled
+one — both bundle calls run. `--brewfile-only` opts into skipping the
+bundled `$ROOT_DIR/Brewfile` bundle call entirely for that run, running
+only the extra Brewfile (local-path or repo-cloned, either works).
+
+This is a session-only boolean flag, not a persisted config var —
+mirrors `--all`/`--dry-run`'s existing pattern exactly (parsed in
+`main()`, exported as `MACUP_BREWFILE_ONLY=1`/`0` for `lib/homebrew.sh`
+to read), not `DOTFILES_REPO`/`EXTRA_BREWFILE`-style config-file
+settings, since "skip the bundled Brewfile just this once" is a
+per-invocation choice, not something you'd want silently sticky across
+every future run via a saved config file.
+
+In `lib/homebrew.sh`'s `run_homebrew`, the existing bundled-Brewfile
+block gets wrapped in a new outer condition:
+
+```bash
+  if [ "${MACUP_BREWFILE_ONLY:-0}" != "1" ]; then
+    if is_dry_run; then
+      dry_run_report "run: brew bundle --file=$ROOT_DIR/Brewfile"
+    else
+      log_info "Running brew bundle with default Brewfile"
+      if ! "$brew_bin" bundle --file="$ROOT_DIR/Brewfile"; then
+        log_error "brew bundle failed for default Brewfile"
+        return 1
+      fi
+    fi
+  fi
+```
+
+and, right after `EXTRA_BREWFILE` is resolved (so this reflects a
+*repo-cloned* extra Brewfile too, not just a local-path one), a
+one-line sanity warning for the "opted into skip, but nothing to run
+instead" case — non-fatal, matching this module's existing
+failure-tolerance style (a missing/misconfigured extra Brewfile is a
+`log_warn`, not a hard stop):
+
+```bash
+  if [ "${MACUP_BREWFILE_ONLY:-0}" = "1" ] && [ -z "${EXTRA_BREWFILE:-}" ]; then
+    log_warn "--brewfile-only set but no extra Brewfile configured (EXTRA_BREWFILE/EXTRA_BREWFILE_REPO); nothing to bundle"
+  fi
+```
+
+Tap-trust extraction (`_untrusted_brewfile_taps`) is intentionally left
+scanning both the bundled and extra Brewfiles regardless of
+`--brewfile-only` — trusting a tap the run happens not to need this time
+is harmless (trust is just a permission grant, not an install), and
+scoping tap-trust to match `--brewfile-only` would add real complexity
+for no correctness benefit. Not doing it.
+
 ### `macup.conf.example` / `README.md`
 
 New commented-out `EXTRA_BREWFILE_REPO=` line in `macup.conf.example`,
@@ -154,6 +208,15 @@ the existing `--brewfile`/`EXTRA_BREWFILE` text.
 - `tests/macup.bats`: new tests for `-br`/`--brewfile-repo` flag parsing
   (mirroring the existing `--dotfiles-repo`/`-d` tests), including the
   "requires a value" error case matching `-d`/`-b`'s existing pattern.
+- `tests/homebrew.bats`: new tests for `--brewfile-only`/`MACUP_BREWFILE_ONLY`
+  — bundled Brewfile is skipped (no `bundle --file=$ROOT_DIR/Brewfile`
+  call) when set and an extra Brewfile exists, both bundles still run
+  when unset (regression guard for the default/existing behavior), and
+  the "set but nothing to bundle" warning fires when no extra Brewfile
+  is configured at all.
+- `tests/macup.bats`: new test for `-bo`/`--brewfile-only` flag parsing
+  and `MACUP_BREWFILE_ONLY` export, mirroring how `--dry-run`/`MACUP_DRY_RUN`
+  is already tested.
 
 **Testing note on the stdout/stderr split above:** bats' `run` merges a
 command's stdout and stderr together into `$output`, so tests that need
