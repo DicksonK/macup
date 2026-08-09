@@ -200,6 +200,17 @@ teardown() {
   [[ "$output" == *"(dry run — nothing was actually changed)"* ]]
 }
 
+@test "macup -bo sets MACUP_BREWFILE_ONLY and skips the bundled Brewfile" {
+  export EXTRA_BREWFILE="$TEST_HOME/extra.Brewfile"
+  echo 'brew "jq"' > "$EXTRA_BREWFILE"
+
+  run "$MACUP_BIN" -bo homebrew
+
+  [ "$status" -eq 0 ]
+  grep -q "bundle --file=$EXTRA_BREWFILE" "$MACUP_CALL_LOG"
+  ! grep -q "bundle --file=$ROOT_DIR/Brewfile" "$MACUP_CALL_LOG"
+}
+
 @test "macup --dry-run prints a startup banner and a summary note" {
   run "$MACUP_BIN" --dry-run homebrew
 

@@ -308,3 +308,39 @@ EOF
   [ "$status" -eq 0 ]
   grep -q "trust --tap example/extra" "$MACUP_CALL_LOG"
 }
+
+@test "run_homebrew skips the bundled Brewfile when MACUP_BREWFILE_ONLY is set" {
+  install_stub_brew
+  export EXTRA_BREWFILE="$TEST_HOME/extra.Brewfile"
+  echo 'brew "jq"' > "$EXTRA_BREWFILE"
+  export MACUP_BREWFILE_ONLY=1
+
+  run run_homebrew
+
+  [ "$status" -eq 0 ]
+  grep -q "bundle --file=$EXTRA_BREWFILE" "$MACUP_CALL_LOG"
+  ! grep -q "bundle --file=$ROOT_DIR/Brewfile" "$MACUP_CALL_LOG"
+}
+
+@test "run_homebrew runs both Brewfiles when MACUP_BREWFILE_ONLY is not set" {
+  install_stub_brew
+  export EXTRA_BREWFILE="$TEST_HOME/extra.Brewfile"
+  echo 'brew "jq"' > "$EXTRA_BREWFILE"
+
+  run run_homebrew
+
+  [ "$status" -eq 0 ]
+  grep -q "bundle --file=$ROOT_DIR/Brewfile" "$MACUP_CALL_LOG"
+  grep -q "bundle --file=$EXTRA_BREWFILE" "$MACUP_CALL_LOG"
+}
+
+@test "run_homebrew warns when MACUP_BREWFILE_ONLY is set but no extra Brewfile is configured" {
+  install_stub_brew
+  export MACUP_BREWFILE_ONLY=1
+
+  run run_homebrew
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"--brewfile-only set but no extra Brewfile configured"* ]]
+  ! grep -q "bundle --file=$ROOT_DIR/Brewfile" "$MACUP_CALL_LOG"
+}

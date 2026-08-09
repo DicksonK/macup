@@ -40,6 +40,7 @@ Options:
   -d, --dotfiles-repo=<url>     Override DOTFILES_REPO for this run
   -b, --brewfile=<path>         Override EXTRA_BREWFILE for this run
   -br, --brewfile-repo=<url>    Override EXTRA_BREWFILE_REPO for this run
+  -bo, --brewfile-only          Skip the bundled Brewfile, run only the extra one
   -v, --version                 Print the installed version and exit
   -h, --help                    Show this help
 
@@ -96,6 +97,7 @@ main() {
   local invocation="$*"
   local run_all=false
   local dry_run=false
+  local brewfile_only=false
   local cli_dotfiles_repo="" cli_brewfile="" cli_brewfile_repo=""
   local -a modules=()
 
@@ -156,6 +158,10 @@ main() {
         cli_brewfile_repo="${1#--brewfile-repo=}"
         shift
         ;;
+      -bo|--brewfile-only)
+        brewfile_only=true
+        shift
+        ;;
       homebrew|shell|dotfiles|macos-defaults|github)
         modules+=("$1")
         shift
@@ -184,6 +190,13 @@ main() {
     MACUP_DRY_RUN=0
   fi
   export MACUP_DRY_RUN
+
+  if [ "$brewfile_only" = true ]; then
+    MACUP_BREWFILE_ONLY=1
+  else
+    MACUP_BREWFILE_ONLY=0
+  fi
+  export MACUP_BREWFILE_ONLY
 
   if is_dry_run; then
     log_info "Dry run: no changes will be made"

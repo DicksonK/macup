@@ -150,14 +150,20 @@ run_homebrew() {
 
   _trust_brewfile_taps "$brew_bin"
 
-  if is_dry_run; then
-    dry_run_report "run: brew bundle --file=$ROOT_DIR/Brewfile"
-  else
-    log_info "Running brew bundle with default Brewfile"
-    if ! "$brew_bin" bundle --file="$ROOT_DIR/Brewfile"; then
-      log_error "brew bundle failed for default Brewfile"
-      return 1
+  if [ "${MACUP_BREWFILE_ONLY:-0}" != "1" ]; then
+    if is_dry_run; then
+      dry_run_report "run: brew bundle --file=$ROOT_DIR/Brewfile"
+    else
+      log_info "Running brew bundle with default Brewfile"
+      if ! "$brew_bin" bundle --file="$ROOT_DIR/Brewfile"; then
+        log_error "brew bundle failed for default Brewfile"
+        return 1
+      fi
     fi
+  fi
+
+  if [ "${MACUP_BREWFILE_ONLY:-0}" = "1" ] && [ -z "${EXTRA_BREWFILE:-}" ]; then
+    log_warn "--brewfile-only set but no extra Brewfile configured (EXTRA_BREWFILE/EXTRA_BREWFILE_REPO); nothing to bundle"
   fi
 
   if [ -n "${EXTRA_BREWFILE:-}" ]; then

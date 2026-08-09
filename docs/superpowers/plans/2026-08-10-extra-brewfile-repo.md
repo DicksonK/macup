@@ -407,8 +407,8 @@ In `tests/homebrew.bats`, add these tests (after the tests Task 1 added):
   run run_homebrew
 
   [ "$status" -eq 0 ]
-  ! grep -q "bundle --file=$ROOT_DIR/Brewfile" "$MACUP_CALL_LOG"
   grep -q "bundle --file=$EXTRA_BREWFILE" "$MACUP_CALL_LOG"
+  ! grep -q "bundle --file=$ROOT_DIR/Brewfile" "$MACUP_CALL_LOG"
 }
 
 @test "run_homebrew runs both Brewfiles when MACUP_BREWFILE_ONLY is not set" {
@@ -445,10 +445,23 @@ In `tests/macup.bats`, add this test (near the existing `-n|--dry-run` tests):
   run "$MACUP_BIN" -bo homebrew
 
   [ "$status" -eq 0 ]
-  ! grep -q "bundle --file=$ROOT_DIR/Brewfile" "$MACUP_CALL_LOG"
   grep -q "bundle --file=$EXTRA_BREWFILE" "$MACUP_CALL_LOG"
+  ! grep -q "bundle --file=$ROOT_DIR/Brewfile" "$MACUP_CALL_LOG"
 }
 ```
+
+**Important — bash/bats `!`-negation gotcha, verified directly:** `set -e`
+(which bats test bodies run under) never triggers on a negated (`!`-prefixed)
+command, *regardless of what the underlying command actually returns* —
+this is documented bash behavior, not a bug. Concretely:
+`bash -c 'set -e; ! false; echo "still reached"'` prints "still reached"
+and exits 0. This means a non-final `! grep -q ...` line in a test body is
+silently a no-op — it can never fail the test by itself, since bats only
+evaluates the *last* command's exit status. **Every negated assertion in
+this plan's tests must be the final statement in its test body** — the
+three tests above are written this way already (negated `grep` last);
+preserve that exact ordering when implementing, don't rearrange it back
+to a more "natural" reading order with the positive assertion last.
 
 - [ ] **Step 2: Run the new tests to verify they fail**
 
