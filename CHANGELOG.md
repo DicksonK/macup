@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.5.0](https://github.com/DicksonK/macup/compare/v0.4.0...v0.5.0) (2026-08-09)
+
+
+### Features
+
+* add --brewfile-only to skip the bundled Brewfile ([903f50d](https://github.com/DicksonK/macup/commit/903f50d412e45a48ed06c41bced23a6ad605e336))
+* keep sudo credentials alive during brew bundle ([3c4160d](https://github.com/DicksonK/macup/commit/3c4160d70f6004be2e1912773aa9c72c8e1766b2))
+* set Nerd Font as Terminal.app/iTerm2 default for Powerlevel10k ([7917774](https://github.com/DicksonK/macup/commit/7917774d678701c657568395ccdbed364b3ad4be))
+* support a git-repo-backed extra Brewfile ([f9a6086](https://github.com/DicksonK/macup/commit/f9a6086762cab93e1033225be89f20422a2c8e87))
+
+
+### Bug Fixes
+
+* Nerd Font terminal config + Homebrew tap trust ([820e807](https://github.com/DicksonK/macup/commit/820e807ff5f6e34e0fa2cd08177de69874646d3a))
+* redirect git subprocess stdout to stderr in _resolve_extra_brewfile ([38f6549](https://github.com/DicksonK/macup/commit/38f65495718a03a79ad99cfd95dfc363e1e38f83))
+* stop dry-run from sending a live Apple Event, harden tap-trust checks ([bea3ceb](https://github.com/DicksonK/macup/commit/bea3cebf6ef94bc86ebbe0446c3a9820e993b234))
+* trust Brewfile-declared Homebrew taps before bundling ([7a2fd01](https://github.com/DicksonK/macup/commit/7a2fd01da9935c722afaac269875f2324f0e18ed))
+
 ## [0.4.0](https://github.com/DicksonK/macup/compare/v0.3.0...v0.4.0) (2026-08-05)
 
 
