@@ -31,15 +31,15 @@ run_dotfiles() {
     source_dir="$ROOT_DIR/dotfiles"
   fi
 
-  local file target linked_count=0
+  local file target found_count=0
   for file in "$source_dir"/*; do
     [ -e "$file" ] || continue
+    found_count=$((found_count + 1))
     target="$HOME/.$(basename "$file")"
 
     if [ ! -e "$target" ] && [ ! -L "$target" ]; then
       if is_dry_run; then
         dry_run_report "link $target -> $file"
-        linked_count=$((linked_count + 1))
         continue
       fi
       if ! ln -s "$file" "$target"; then
@@ -47,7 +47,6 @@ run_dotfiles() {
         continue
       fi
       log_info "Linked $target -> $file"
-      linked_count=$((linked_count + 1))
       continue
     fi
 
@@ -66,7 +65,6 @@ run_dotfiles() {
         log_warn "Skipped $target: backup $target.macup-backup already exists"
       else
         dry_run_report "prompt to back up and replace $target"
-        linked_count=$((linked_count + 1))
       fi
       continue
     fi
@@ -85,13 +83,12 @@ run_dotfiles() {
         continue
       fi
       log_info "Backed up and linked $target -> $file"
-      linked_count=$((linked_count + 1))
     else
       log_warn "Skipped $target"
     fi
   done
 
-  if [ "$linked_count" -eq 0 ]; then
+  if [ "$found_count" -eq 0 ]; then
     log_warn "No dotfiles found to link in $source_dir"
   fi
 

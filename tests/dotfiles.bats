@@ -29,6 +29,17 @@ teardown() {
   [[ "$output" == *".zshrc already up to date"* ]]
 }
 
+@test "run_dotfiles does not warn 'No dotfiles found' when every target is already up to date" {
+  for file in "$ROOT_DIR"/dotfiles/*; do
+    ln -s "$file" "$HOME/.$(basename "$file")"
+  done
+
+  run run_dotfiles
+
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"No dotfiles found"* ]]
+}
+
 @test "run_dotfiles backs up and replaces an existing regular file when confirmed" {
   echo "my custom zshrc" > "$HOME/.zshrc"
   export GUM_CONFIRM_EXIT=0
