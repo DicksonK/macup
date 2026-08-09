@@ -24,7 +24,7 @@ ui_choose_modules() {
     --cursor.foreground 212 \
     --selected.foreground 212 \
     "homebrew: Install Homebrew packages from the Brewfile" \
-    "shell: Install Oh My Zsh + Powerlevel10k" \
+    "shell: Install Oh My Zsh + Powerlevel10k, set terminal Nerd Font" \
     "dotfiles: Symlink dotfiles into \$HOME" \
     "macos-defaults: Apply curated macOS system defaults" \
     "github: Set up a GitHub SSH key and gh CLI auth" \

@@ -60,6 +60,9 @@ five; a full run looks roughly like this:
 ==> Running homebrew
 ==> Homebrew not found, installing
   [... official Homebrew installer output ...]
+? Trust 2 Homebrew tap(s) required by your Brewfile: homebrew/autoupdate martido/homebrew-graph? [y/N]
+==> Trusted tap homebrew/autoupdate
+==> Trusted tap martido/homebrew-graph
 ==> Running brew bundle with default Brewfile
   [... brew installs git, gh, gum, bat, fzf, ripgrep, fd, jq, wget, tmux,
        neovim, iterm2, visual-studio-code, rectangle ...]
@@ -67,6 +70,8 @@ five; a full run looks roughly like this:
 ==> Installing Oh My Zsh
   [... official Oh My Zsh installer output ...]
 ==> Cloning Powerlevel10k
+==> Set Terminal.app font to MesloLGS Nerd Font Mono
+==> Created iTerm2 dynamic profile with MesloLGS Nerd Font Mono and set as default
 ==> Running dotfiles
 ==> Linked /Users/you/.zshrc -> /opt/homebrew/opt/macup/libexec/dotfiles/zshrc
 ==> Linked /Users/you/.p10k.zsh -> /opt/homebrew/opt/macup/libexec/dotfiles/p10k.zsh
@@ -95,6 +100,24 @@ Notice the `github` module never asked for an email — it reused
 `ada@example.com` from the git identity `dotfiles` had just written a
 few steps earlier. That's the module ordering paying off.
 
+Two other things happened in that `homebrew` run worth calling out:
+
+- **Tap trust.** Homebrew versions with tap trust checks refuse to load
+  formulae/casks from a tap that hasn't been explicitly trusted, which
+  silently breaks `brew bundle` for any custom `tap "..."` line in your
+  Brewfile(s). Before bundling, `homebrew` extracts every tap your
+  Brewfile(s) declare, checks which aren't yet trusted, and (in an
+  interactive run) prompts once to trust all of them in one go. In a
+  non-interactive run (`--all` or explicit module names) it can't safely
+  prompt, so it logs a warning naming the untrusted taps instead and
+  continues — re-run interactively later to trust them.
+- **Sudo credentials.** If `brew bundle` needs `sudo` (some casks do) and
+  a password prompt caches your credentials, a background refresh loop
+  keeps them alive for the rest of the `brew bundle` run so you're not
+  asked twice for a single long install. It never forces an initial
+  prompt on its own — it only keeps an already-cached credential from
+  expiring.
+
 ## Preview before you commit: `--dry-run`
 
 Add `--dry-run` to any invocation to see exactly what would happen —
@@ -114,6 +137,8 @@ macup --dry-run --all
 ==> Running shell
 ==> Oh My Zsh already installed, skipping
 ==> Powerlevel10k already installed, skipping
+==> Terminal.app font already set to MesloLGS Nerd Font Mono, skipping
+==> iTerm2 default profile already set to the macup Nerd Font profile, skipping
 ==> Running dotfiles
 ==> /Users/you/.zshrc already up to date
 ==> [dry-run] would prompt for and write git identity to /Users/you/.gitconfig.local
@@ -183,6 +208,8 @@ after you've already set everything up mostly just prints "already
 ==> Running shell
 ==> Oh My Zsh already installed, skipping
 ==> Powerlevel10k already installed, skipping
+==> Terminal.app font already set to MesloLGS Nerd Font Mono, skipping
+==> iTerm2 default profile already set to the macup Nerd Font profile, skipping
 ==> Running dotfiles
 ==> /Users/you/.zshrc already up to date
 ==> /Users/you/.p10k.zsh already up to date
@@ -256,6 +283,33 @@ the file exists — runs your `EXTRA_BREWFILE` as a second, additive
 `brew bundle` pass. If the path is set but the file's missing, that's a
 non-fatal warning (`EXTRA_BREWFILE set but not found: ...`), not a
 failure — the bundled install still completes.
+
+If your extra packages live in their own git repo instead of a local
+file, point `--brewfile-repo=<url>` (or persisted `EXTRA_BREWFILE_REPO`)
+at it:
+
+```sh
+macup --brewfile-repo=git@github.com:you/my-brewfiles.git homebrew
+```
+
+First run clones it into `~/.cache/macup/brewfile-repo`; later runs
+`git pull --ff-only` that same clone, the same caching pattern as
+`DOTFILES_REPO`. Once `EXTRA_BREWFILE_REPO` is set, `EXTRA_BREWFILE`
+is reinterpreted as a path *within that repo* rather than a local path
+— e.g. `EXTRA_BREWFILE=work/Brewfile.personal` resolves to
+`~/.cache/macup/brewfile-repo/work/Brewfile.personal` — and defaults to
+`Brewfile` at the repo root if left unset.
+
+To skip the bundled `Brewfile` entirely for a run and install only your
+own — say, on a machine that shouldn't get the general-purpose set —
+add `--brewfile-only`/`-bo`:
+
+```sh
+macup --brewfile-repo=git@github.com:you/my-brewfiles.git --brewfile-only homebrew
+```
+
+It's a per-invocation flag, not something you persist in the config
+file.
 
 ## Git identity in depth
 
@@ -357,6 +411,8 @@ debugging a run that failed partway through, check the summary's
 | `--dry-run` | `-n` | Preview actions without making any changes or prompting |
 | `--dotfiles-repo=<url>` | `-d <url>` | Override `DOTFILES_REPO` for this run only |
 | `--brewfile=<path>` | `-b <path>` | Override `EXTRA_BREWFILE` for this run only |
+| `--brewfile-repo=<url>` | `-br <url>` | Override `EXTRA_BREWFILE_REPO` for this run only |
+| `--brewfile-only` | `-bo` | Skip the bundled `Brewfile`, run only the extra one |
 | `--help` | `-h` | Show usage and exit |
 | `--version` | `-v` | Print the installed version and exit |
 
@@ -366,8 +422,8 @@ interactive-selection-but-non-mutating preview).
 
 | Module | What it does |
 |---|---|
-| `homebrew` | Installs Homebrew if missing, runs `brew bundle` on the default `Brewfile`, then `EXTRA_BREWFILE` if set |
-| `shell` | Installs Oh My Zsh + Powerlevel10k if missing |
+| `homebrew` | Installs Homebrew if missing, trusts any untrusted taps your Brewfile(s) declare, runs `brew bundle` on the default `Brewfile` (unless `--brewfile-only`), then `EXTRA_BREWFILE`/`EXTRA_BREWFILE_REPO` if set |
+| `shell` | Installs Oh My Zsh + Powerlevel10k if missing; sets Terminal.app/iTerm2's default font to a Nerd Font for Powerlevel10k's icons |
 | `dotfiles` | Symlinks dotfiles (bundled or from `DOTFILES_REPO`) into `$HOME`; manages `~/.gitconfig.local` |
 | `macos-defaults` | Applies a curated set of Finder/keyboard/trackpad/screenshot settings |
 | `github` | Generates an SSH key, authenticates `gh` via a PAT, and registers the key with GitHub |
