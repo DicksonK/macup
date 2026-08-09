@@ -40,19 +40,19 @@ _resolve_extra_brewfile() {
   local cache_dir="$HOME/.cache/macup/brewfile-repo"
   if [ -d "$cache_dir/.git" ]; then
     if is_dry_run; then
-      dry_run_report "update the Brewfile repo cache at $cache_dir"
+      dry_run_report "update the Brewfile repo cache at $cache_dir" >&2
     else
-      log_info "Updating Brewfile repo cache"
+      log_info "Updating Brewfile repo cache" >&2
       if ! git -C "$cache_dir" pull --ff-only; then
         log_warn "Failed to update Brewfile repo cache, using existing checkout"
       fi
     fi
   else
     if is_dry_run; then
-      dry_run_report "clone Brewfile repo $(_redact_secrets "$EXTRA_BREWFILE_REPO") into $cache_dir"
+      dry_run_report "clone Brewfile repo $(_redact_secrets "$EXTRA_BREWFILE_REPO") into $cache_dir" >&2
       return 0
     fi
-    log_info "Cloning Brewfile repo: $(_redact_secrets "$EXTRA_BREWFILE_REPO")"
+    log_info "Cloning Brewfile repo: $(_redact_secrets "$EXTRA_BREWFILE_REPO")" >&2
     mkdir -p "$(dirname "$cache_dir")"
     if ! git clone "$EXTRA_BREWFILE_REPO" "$cache_dir"; then
       log_error "Failed to clone Brewfile repo: $(_redact_secrets "$EXTRA_BREWFILE_REPO")"
@@ -63,6 +63,20 @@ _resolve_extra_brewfile() {
   printf '%s/%s' "$cache_dir" "${EXTRA_BREWFILE:-Brewfile}"
 }
 ```
+
+**Every `log_info`/`dry_run_report` call in this function is redirected
+to stderr (`>&2`) — this is required for correctness, not style.** The
+function's actual return value (the resolved path) is meant to be
+captured via `EXTRA_BREWFILE="$(_resolve_extra_brewfile)"` in
+`run_homebrew`. Command substitution captures *all* stdout produced
+during a function's execution, not just a "designated" final value —
+`log_info` prints to stdout by default (unlike `log_warn`/`log_error`,
+which already redirect to stderr inside their own definitions in
+`lib/common.sh`). Without the `>&2` here, a log message like "Cloning
+Brewfile repo: ..." would get concatenated into `$EXTRA_BREWFILE`
+itself, corrupting the very path `run_homebrew` needs — the user-facing
+message must stay visible on the terminal (stderr still displays
+normally), it just must not be part of the captured stdout value.
 
 - Mirrors `lib/dotfiles.sh`'s `DOTFILES_REPO` clone/pull block exactly
   (same cache-dir-exists check, same `git pull --ff-only` /
@@ -140,3 +154,13 @@ the existing `--brewfile`/`EXTRA_BREWFILE` text.
 - `tests/macup.bats`: new tests for `-br`/`--brewfile-repo` flag parsing
   (mirroring the existing `--dotfiles-repo`/`-d` tests), including the
   "requires a value" error case matching `-d`/`-b`'s existing pattern.
+
+**Testing note on the stdout/stderr split above:** bats' `run` merges a
+command's stdout and stderr together into `$output`, so tests that need
+to verify the *actual return value* (what a real `$(_resolve_extra_brewfile)`
+call would capture) cannot rely on `$output` alone — a log message would
+still show up there even after being redirected to stderr in the real
+function. Those tests capture the return value directly instead:
+`result="$(_resolve_extra_brewfile 2>/dev/null)"`, discarding stderr
+explicitly, then assert on `$result`. Tests that only need to confirm a
+log message was printed still use `run` + `$output` normally.
