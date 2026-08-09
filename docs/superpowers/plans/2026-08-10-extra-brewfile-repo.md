@@ -14,7 +14,7 @@
 - When `EXTRA_BREWFILE_REPO` is set, `EXTRA_BREWFILE` is reinterpreted as the relative path within the cloned repo to the Brewfile, defaulting to `Brewfile` (repo root) if `EXTRA_BREWFILE` itself is unset.
 - Clone/pull lifecycle mirrors `lib/dotfiles.sh`'s `DOTFILES_REPO` handling exactly: cache dir `~/.cache/macup/brewfile-repo`, `git -C "$cache_dir" pull --ff-only` if `.git` already exists there (falling back to `log_warn` + using the existing checkout on failure, not aborting), `git clone` otherwise. Credentials embedded in the URL are redacted via the existing `_redact_secrets` helper before any log line.
 - In `--dry-run` mode, if the repo hasn't been cloned yet, `_resolve_extra_brewfile` reports the clone intent and returns an empty string (can't preview an unfetched repo's contents — same accepted limitation `DOTFILES_REPO` already has). If the repo is already cached from a prior real run, dry-run resolves and previews the real path normally.
-- `_resolve_extra_brewfile`'s shadowing (`local EXTRA_BREWFILE; EXTRA_BREWFILE="$(_resolve_extra_brewfile)" || return 1` inside `run_homebrew`) must happen before `_trust_brewfile_taps` is called and before the existing extra-Brewfile bundle block — both already read `$EXTRA_BREWFILE` as an ordinary variable and need no other changes.
+- `_resolve_extra_brewfile`'s shadowing inside `run_homebrew` must happen before `_trust_brewfile_taps` is called and before the existing extra-Brewfile bundle block — both already read `$EXTRA_BREWFILE` as an ordinary variable and need no other changes. **Must use the two-step form** — `local _resolved_extra_brewfile; _resolved_extra_brewfile="$(_resolve_extra_brewfile)" || return 1; local EXTRA_BREWFILE="$_resolved_extra_brewfile"` — not a bare `local EXTRA_BREWFILE` followed by `EXTRA_BREWFILE="$(...)"` on the next line: that shadows `EXTRA_BREWFILE` to empty *before* the command substitution runs, so `_resolve_extra_brewfile` would always see an empty value regardless of what the caller set, silently breaking local-path mode. Verified directly (see Step 4).
 - `--brewfile-only` is a session-only flag (like `--all`/`--dry-run`), not a persisted `macup.conf.example` config var — "skip the bundled Brewfile just this once" is a per-invocation choice, not something that should silently stick across future runs via a saved config file.
 - `--brewfile-only` does NOT change tap-trust scanning — `_untrusted_brewfile_taps` keeps scanning both the bundled and extra Brewfiles regardless, since trusting an unused tap is harmless and scoping it would add complexity for no correctness benefit. Do not touch `_untrusted_brewfile_taps`/`_trust_brewfile_taps` in Task 2.
 
@@ -118,7 +118,14 @@ In `tests/homebrew.bats`, add these tests (after the existing tests, before the 
 
   [ "$status" -eq 0 ]
   [[ "$output" != *"ghp_secrettoken"* ]]
-  ! grep -q "ghp_secrettoken" "$MACUP_CALL_LOG"
+  # Deliberately NOT asserting $MACUP_CALL_LOG is secret-free here: git
+  # clone must receive the real, unredacted URL to authenticate (exactly
+  # like the existing DOTFILES_REPO handling in lib/dotfiles.sh), and
+  # $MACUP_CALL_LOG records the literal argv passed to the stubbed git —
+  # it correctly contains the secret. Redaction applies only to the
+  # user-facing log message ($output above), matching the established
+  # pattern in tests/dotfiles.bats's analogous DOTFILES_REPO redaction
+  # tests, which likewise only assert against $output.
 }
 
 @test "run_homebrew trusts taps declared in a cloned extra Brewfile" {
@@ -245,9 +252,35 @@ In `lib/homebrew.sh`, in `run_homebrew`, immediately after the `if [ -z "$brew_b
 
 ```bash
 
-  local EXTRA_BREWFILE
-  EXTRA_BREWFILE="$(_resolve_extra_brewfile)" || return 1
+  local _resolved_extra_brewfile
+  _resolved_extra_brewfile="$(_resolve_extra_brewfile)" || return 1
+  local EXTRA_BREWFILE="$_resolved_extra_brewfile"
 ```
+
+**This exact two-step form is required — do not write it as a bare
+`local EXTRA_BREWFILE` followed by `EXTRA_BREWFILE="$(_resolve_extra_brewfile)"`
+on the next line.** That ordering shadows `EXTRA_BREWFILE` to empty
+*immediately* on the `local` line, before the command substitution on
+the following line even runs — so `_resolve_extra_brewfile` would
+always see an empty `EXTRA_BREWFILE`, silently breaking local-path mode
+for anyone not also using `EXTRA_BREWFILE_REPO`. Verify this yourself
+before moving on if you're unsure:
+
+```bash
+bash -c '
+inner() { echo "sees EXTRA_BREWFILE=[${EXTRA_BREWFILE:-}]"; }
+outer() { local EXTRA_BREWFILE; EXTRA_BREWFILE="$(inner)"; echo "result=[$EXTRA_BREWFILE]"; }
+export EXTRA_BREWFILE="/path/to/my.Brewfile"
+outer
+'
+```
+This prints `result=[sees EXTRA_BREWFILE=[]]` — the value is lost. The
+two-step form above (resolving into a differently-named local first)
+avoids this. It also isn't simply
+`local EXTRA_BREWFILE="$(_resolve_extra_brewfile)"` collapsed onto one
+line — combining declare+assign masks the command substitution's exit
+status (shellcheck SC2155), silently breaking the required
+`|| return 1` clone-failure propagation.
 
 - [ ] **Step 5: Add `EXTRA_BREWFILE_REPO` to `load_config` in `lib/common.sh`**
 

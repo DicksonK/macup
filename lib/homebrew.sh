@@ -3,6 +3,38 @@
 : "${MACUP_BREW_PATH_APPLE_SILICON:=/opt/homebrew/bin/brew}"
 : "${MACUP_BREW_PATH_INTEL:=/usr/local/bin/brew}"
 
+_resolve_extra_brewfile() {
+  if [ -z "${EXTRA_BREWFILE_REPO:-}" ]; then
+    printf '%s' "${EXTRA_BREWFILE:-}"
+    return 0
+  fi
+
+  local cache_dir="$HOME/.cache/macup/brewfile-repo"
+  if [ -d "$cache_dir/.git" ]; then
+    if is_dry_run; then
+      dry_run_report "update the Brewfile repo cache at $cache_dir" >&2
+    else
+      log_info "Updating Brewfile repo cache" >&2
+      if ! git -C "$cache_dir" pull --ff-only; then
+        log_warn "Failed to update Brewfile repo cache, using existing checkout"
+      fi
+    fi
+  else
+    if is_dry_run; then
+      dry_run_report "clone Brewfile repo $(_redact_secrets "$EXTRA_BREWFILE_REPO") into $cache_dir" >&2
+      return 0
+    fi
+    log_info "Cloning Brewfile repo: $(_redact_secrets "$EXTRA_BREWFILE_REPO")" >&2
+    mkdir -p "$(dirname "$cache_dir")"
+    if ! git clone "$EXTRA_BREWFILE_REPO" "$cache_dir"; then
+      log_error "Failed to clone Brewfile repo: $(_redact_secrets "$EXTRA_BREWFILE_REPO")"
+      return 1
+    fi
+  fi
+
+  printf '%s/%s' "$cache_dir" "${EXTRA_BREWFILE:-Brewfile}"
+}
+
 _start_sudo_keepalive() {
   ( while true; do sudo -n true 2>/dev/null; sleep 60; kill -0 "$$" 2>/dev/null || exit; done ) >/dev/null 2>&1 &
   echo $!
@@ -100,6 +132,15 @@ run_homebrew() {
       fi
     fi
   fi
+
+  # Resolve into a differently-named local first, then assign into
+  # EXTRA_BREWFILE: `local EXTRA_BREWFILE; EXTRA_BREWFILE="$(_resolve_extra_brewfile)"`
+  # would declare-then-shadow EXTRA_BREWFILE to empty *before* the command
+  # substitution subshell forks, so _resolve_extra_brewfile would never see
+  # a caller-provided EXTRA_BREWFILE (e.g. from config/CLI) at all.
+  local _resolved_extra_brewfile
+  _resolved_extra_brewfile="$(_resolve_extra_brewfile)" || return 1
+  local EXTRA_BREWFILE="$_resolved_extra_brewfile"
 
   local sudo_keepalive_pid=""
   if ! is_dry_run; then

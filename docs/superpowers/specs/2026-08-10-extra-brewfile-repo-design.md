@@ -105,9 +105,37 @@ block and before `_trust_brewfile_taps`), shadow `EXTRA_BREWFILE` with
 its resolved value for the rest of the function:
 
 ```bash
-  local EXTRA_BREWFILE
-  EXTRA_BREWFILE="$(_resolve_extra_brewfile)" || return 1
+  local _resolved_extra_brewfile
+  _resolved_extra_brewfile="$(_resolve_extra_brewfile)" || return 1
+  local EXTRA_BREWFILE="$_resolved_extra_brewfile"
 ```
+
+**This two-step form is required — do not collapse it.** A bare
+`local EXTRA_BREWFILE` (no assignment) on its own line shadows any
+caller-provided/exported `EXTRA_BREWFILE` to empty *immediately*,
+before the next line's `_resolve_extra_brewfile` command substitution
+even runs — so `_resolve_extra_brewfile` would always see an empty
+`EXTRA_BREWFILE`, silently breaking the existing local-path mode for
+anyone not also using `EXTRA_BREWFILE_REPO`. Verified directly:
+
+```bash
+$ bash -c '
+inner() { echo "sees EXTRA_BREWFILE=[${EXTRA_BREWFILE:-}]"; }
+outer() { local EXTRA_BREWFILE; EXTRA_BREWFILE="$(inner)"; echo "result=[$EXTRA_BREWFILE]"; }
+export EXTRA_BREWFILE="/path/to/my.Brewfile"
+outer
+'
+result=[sees EXTRA_BREWFILE=[]]
+```
+
+Resolving into a differently-named local first avoids the shadowing
+(the command substitution still sees the real, unshadowed value), then
+assigns the result into `EXTRA_BREWFILE`. This also isn't simply
+`local EXTRA_BREWFILE="$(_resolve_extra_brewfile)"` collapsed onto one
+line — combining declare+assign on one line masks the command
+substitution's exit status (a real shellcheck finding, SC2155), which
+would silently break the required `|| return 1` clone-failure
+propagation. The two-step version avoids both problems at once.
 
 Bash's dynamic scoping means every function `run_homebrew` calls after
 this point (`_trust_brewfile_taps` → `_untrusted_brewfile_taps`, and

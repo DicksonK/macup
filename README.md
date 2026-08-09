@@ -30,6 +30,7 @@ macup --all                    # run all modules, non-interactive
 macup homebrew dotfiles        # run only the named modules, non-interactive
 macup --dotfiles-repo=<url> dotfiles
 macup --brewfile=<path> homebrew
+macup --brewfile-repo=<url> homebrew
 macup --dry-run --all          # preview every module's intended actions, no changes made
 macup --help
 macup --version
@@ -49,10 +50,20 @@ On first run (or on demand), `macup` offers to create
 ```sh
 DOTFILES_REPO=              # e.g. git@github.com:you/dotfiles.git — blank uses bundled dotfiles
 EXTRA_BREWFILE=             # e.g. /Users/you/Brewfile.personal — blank means bundled Brewfile only
+EXTRA_BREWFILE_REPO=        # e.g. git@github.com:you/my-brewfiles.git — blank uses EXTRA_BREWFILE as-is
 ```
 
-`--dotfiles-repo=<url>` and `--brewfile=<path>` override these for a
-single run without editing the file.
+`--dotfiles-repo=<url>`, `--brewfile=<path>`, and `--brewfile-repo=<url>`
+override these for a single run without editing the file.
+
+`EXTRA_BREWFILE_REPO` (or `--brewfile-repo=<url>`) points at a git repo
+containing an additional Brewfile, cloned into
+`~/.cache/macup/brewfile-repo` (and pulled on later runs), the same way
+`DOTFILES_REPO` is cloned into `~/.cache/macup/dotfiles-repo`. When it's
+set, `EXTRA_BREWFILE` is reinterpreted as the path to the Brewfile
+*within that repo* rather than a local path — e.g. `EXTRA_BREWFILE=work/Brewfile.personal`
+resolves to `~/.cache/macup/brewfile-repo/work/Brewfile.personal` — and
+defaults to `Brewfile` at the repo's root if left unset.
 
 `macup dotfiles` also manages a per-machine `~/.gitconfig.local` file
 (via `git config -f`, never symlinked) for `git config user.name`/

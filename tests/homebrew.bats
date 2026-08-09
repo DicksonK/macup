@@ -196,3 +196,115 @@ EOF
   [ "$status" -eq 0 ]
   [ ! -f "$MACUP_CALL_LOG" ] || ! grep -q "^sudo " "$MACUP_CALL_LOG"
 }
+
+@test "_resolve_extra_brewfile passes EXTRA_BREWFILE through unchanged when no repo is set" {
+  export EXTRA_BREWFILE="$TEST_HOME/my.Brewfile"
+
+  run _resolve_extra_brewfile
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "$TEST_HOME/my.Brewfile" ]
+}
+
+@test "_resolve_extra_brewfile returns empty when neither EXTRA_BREWFILE nor EXTRA_BREWFILE_REPO is set" {
+  run _resolve_extra_brewfile
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "" ]
+}
+
+@test "_resolve_extra_brewfile clones EXTRA_BREWFILE_REPO and defaults to Brewfile at its root" {
+  export EXTRA_BREWFILE_REPO="git@github.com:example/my-brewfiles.git"
+
+  result="$(_resolve_extra_brewfile 2>/dev/null)"
+
+  [ "$result" = "$HOME/.cache/macup/brewfile-repo/Brewfile" ]
+  grep -q "clone git@github.com:example/my-brewfiles.git $HOME/.cache/macup/brewfile-repo" "$MACUP_CALL_LOG"
+}
+
+@test "_resolve_extra_brewfile uses EXTRA_BREWFILE as the in-repo relative path when both are set" {
+  export EXTRA_BREWFILE_REPO="git@github.com:example/my-brewfiles.git"
+  export EXTRA_BREWFILE="work/Brewfile.personal"
+
+  result="$(_resolve_extra_brewfile 2>/dev/null)"
+
+  [ "$result" = "$HOME/.cache/macup/brewfile-repo/work/Brewfile.personal" ]
+}
+
+@test "_resolve_extra_brewfile pulls instead of cloning when the cache already exists" {
+  export EXTRA_BREWFILE_REPO="git@github.com:example/my-brewfiles.git"
+  mkdir -p "$HOME/.cache/macup/brewfile-repo/.git"
+
+  _resolve_extra_brewfile >/dev/null 2>&1
+
+  grep -q "pull --ff-only" "$MACUP_CALL_LOG"
+  ! grep -q "^git clone" "$MACUP_CALL_LOG"
+}
+
+@test "_resolve_extra_brewfile reports the clone in dry-run mode and returns empty when not yet cloned" {
+  export EXTRA_BREWFILE_REPO="git@github.com:example/my-brewfiles.git"
+  export MACUP_DRY_RUN=1
+
+  run _resolve_extra_brewfile
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"clone Brewfile repo git@github.com:example/my-brewfiles.git"* ]]
+  [ ! -d "$HOME/.cache/macup/brewfile-repo" ]
+
+  result="$(_resolve_extra_brewfile 2>/dev/null)"
+  [ "$result" = "" ]
+}
+
+@test "_resolve_extra_brewfile resolves the real path in dry-run mode when already cloned" {
+  export EXTRA_BREWFILE_REPO="git@github.com:example/my-brewfiles.git"
+  mkdir -p "$HOME/.cache/macup/brewfile-repo/.git"
+  export MACUP_DRY_RUN=1
+
+  run _resolve_extra_brewfile
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"would update the Brewfile repo cache"* ]]
+  ! grep -q "pull" "$MACUP_CALL_LOG"
+
+  result="$(_resolve_extra_brewfile 2>/dev/null)"
+  [ "$result" = "$HOME/.cache/macup/brewfile-repo/Brewfile" ]
+}
+
+@test "_resolve_extra_brewfile redacts embedded credentials when logging a clone" {
+  export EXTRA_BREWFILE_REPO="https://oauth2:ghp_secrettoken@github.com/example/my-brewfiles.git"
+
+  run _resolve_extra_brewfile
+
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"ghp_secrettoken"* ]]
+  # Note: intentionally not asserting on $MACUP_CALL_LOG here, unlike the
+  # other tests in this file. $MACUP_CALL_LOG records the literal argv of
+  # every stubbed command invocation, including `git clone`'s target URL
+  # -- and `git clone` must receive the real, unredacted URL to actually
+  # authenticate (mirrors lib/dotfiles.sh's DOTFILES_REPO handling and
+  # tests/dotfiles.bats's analogous redaction tests, which also only
+  # assert against $output, never $MACUP_CALL_LOG, for this exact
+  # reason). Only $output (i.e. what log_info/dry_run_report print) and
+  # the real macup log file are expected to be redacted -- see
+  # tests/macup.bats's "redacts credentials ... from the run-header log
+  # line" test for that coverage.
+}
+
+@test "run_homebrew trusts taps declared in a cloned extra Brewfile" {
+  install_stub_brew
+  export EXTRA_BREWFILE_REPO="git@github.com:example/my-brewfiles.git"
+  export GUM_CONFIRM_EXIT=0
+  # Pre-seed the cache dir with a .git marker so _resolve_extra_brewfile
+  # takes the "already cloned" (pull) path rather than clone — this lets
+  # us control the Brewfile's content directly rather than depending on
+  # what the git stub's `clone` case would put there (it creates an
+  # empty target/.git dir with no file content).
+  mkdir -p "$HOME/.cache/macup/brewfile-repo"
+  echo 'tap "example/extra"' > "$HOME/.cache/macup/brewfile-repo/Brewfile"
+  mkdir -p "$HOME/.cache/macup/brewfile-repo/.git"
+
+  run run_homebrew
+
+  [ "$status" -eq 0 ]
+  grep -q "trust --tap example/extra" "$MACUP_CALL_LOG"
+}
