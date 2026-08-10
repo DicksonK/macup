@@ -103,7 +103,11 @@ run_dotfiles() {
     elif [ "${MACUP_SKIP_GIT_IDENTITY:-0}" = "1" ]; then
       log_info "Skipping git identity setup (--skip-git-identity)"
     elif is_dry_run; then
-      dry_run_report "prompt for and write git identity to $identity_file"
+      if [ "${MACUP_NONINTERACTIVE:-0}" = "1" ]; then
+        dry_run_report "skip git identity setup (non-interactive, no identity configured)"
+      else
+        dry_run_report "prompt for and write git identity to $identity_file"
+      fi
     elif [ "${MACUP_NONINTERACTIVE:-0}" = "1" ]; then
       log_warn "Skipping git identity setup: no identity configured and running non-interactively (pass --skip-git-identity to silence this, or configure $identity_file directly)"
     else

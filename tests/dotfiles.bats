@@ -291,6 +291,17 @@ teardown() {
   [ ! -f "$HOME/.gitconfig.local" ]
 }
 
+@test "run_dotfiles reports the non-interactive git identity skip in dry-run mode" {
+  export MACUP_DRY_RUN=1
+  export MACUP_NONINTERACTIVE=1
+
+  run run_dotfiles
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"[dry-run] would skip git identity setup (non-interactive, no identity configured)"* ]]
+  [ ! -f "$HOME/.gitconfig.local" ]
+}
+
 @test "run_dotfiles still reports already-configured git identity in dry-run mode" {
   git config -f "$HOME/.gitconfig.local" user.name "Existing Name"
   git config -f "$HOME/.gitconfig.local" user.email "existing@example.com"

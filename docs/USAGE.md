@@ -141,7 +141,7 @@ macup --dry-run --all
 ==> iTerm2 default profile already set to the macup Nerd Font profile, skipping
 ==> Running dotfiles
 ==> /Users/you/.zshrc already up to date
-==> [dry-run] would prompt for and write git identity to /Users/you/.gitconfig.local
+==> [dry-run] would skip git identity setup (non-interactive, no identity configured)
 ==> Running macos-defaults
 ==> com.apple.finder AppleShowAllExtensions already set to true, skipping
 ==> [dry-run] would create /Users/you/Screenshots
@@ -179,6 +179,12 @@ run, either create `~/.config/macup/config` ahead of time (by hand, or
 by running `macup` interactively once) or pass `--dotfiles-repo=`/
 `--brewfile=` on the command line (see below) — both work without any
 config file at all.
+
+The `dotfiles` module's git identity prompt is likewise auto-skipped
+in this mode (with a warning) if `~/.gitconfig.local` isn't already
+configured — there's no TTY to answer it. Pass `--skip-git-identity`
+to silence the warning, or preconfigure the identity ahead of time.
+See [Git identity in depth](#git-identity-in-depth) for details.
 
 ## Running just one or two modules
 
@@ -337,6 +343,27 @@ Every later run reuses it silently (`Git identity already configured
 `user.name` by hand), you're only prompted for the missing one — the
 existing value is preserved, not overwritten.
 
+Leaving either prompt blank now skips writing the identity entirely
+(`Skipped git identity setup`) rather than writing a partial identity
+with an empty name or email — you'll be re-prompted on the next run.
+
+Pass `--skip-git-identity` to skip the prompt outright, whether or not
+you're running interactively:
+
+```
+==> Skipping git identity setup (--skip-git-identity)
+```
+
+Non-interactive runs (`--all`, or naming modules directly, e.g. `macup
+dotfiles`) can't show a prompt — there's no TTY to answer `gum input`
+— so if no identity is configured yet and `--skip-git-identity` wasn't
+passed, `dotfiles` skips the prompt automatically and logs a warning
+instead of hanging:
+
+```
+==> Skipping git identity setup: no identity configured and running non-interactively (pass --skip-git-identity to silence this, or configure /Users/you/.gitconfig.local directly)
+```
+
 This only applies when using the **bundled** dotfiles (`DOTFILES_REPO`
 unset) — an external `DOTFILES_REPO` is assumed to manage its own git
 identity however it likes, and `dotfiles` never touches
@@ -413,6 +440,7 @@ debugging a run that failed partway through, check the summary's
 | `--brewfile=<path>` | `-b <path>` | Override `EXTRA_BREWFILE` for this run only |
 | `--brewfile-repo=<url>` | `-br <url>` | Override `EXTRA_BREWFILE_REPO` for this run only |
 | `--brewfile-only` | `-bo` | Skip the bundled `Brewfile`, run only the extra one |
+| `--skip-git-identity` |  | Skip prompting for/writing git `user.name`/`user.email` in the `dotfiles` module |
 | `--help` | `-h` | Show usage and exit |
 | `--version` | `-v` | Print the installed version and exit |
 
