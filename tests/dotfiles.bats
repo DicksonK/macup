@@ -168,6 +168,48 @@ teardown() {
   [[ "$output" != *"Git identity already configured"* ]]
 }
 
+@test "run_dotfiles skips git identity setup when MACUP_SKIP_GIT_IDENTITY is set" {
+  export MACUP_SKIP_GIT_IDENTITY=1
+  export GUM_INPUT_RESULT="Jane Doe"
+
+  run run_dotfiles
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Skipping git identity setup (--skip-git-identity)"* ]]
+  [ ! -f "$HOME/.gitconfig.local" ]
+  ! grep -q "gum input" "$MACUP_CALL_LOG"
+}
+
+@test "run_dotfiles warns and skips git identity setup when non-interactive without the skip flag" {
+  export MACUP_NONINTERACTIVE=1
+  export GUM_INPUT_RESULT="Jane Doe"
+
+  run run_dotfiles
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Skipping git identity setup: no identity configured and running non-interactively"* ]]
+  [ ! -f "$HOME/.gitconfig.local" ]
+  ! grep -q "gum input" "$MACUP_CALL_LOG"
+}
+
+@test "run_dotfiles skips writing git identity when the prompts are left blank" {
+  run run_dotfiles
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Skipped git identity setup"* ]]
+  [ ! -f "$HOME/.gitconfig.local" ]
+}
+
+@test "run_dotfiles skips writing git identity when only the email prompt is left blank" {
+  git config -f "$HOME/.gitconfig.local" user.name "Existing Name"
+
+  run run_dotfiles
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Skipped git identity setup"* ]]
+  [ -z "$(git config -f "$HOME/.gitconfig.local" --get user.email 2>/dev/null || true)" ]
+}
+
 @test "run_dotfiles logs a warning instead of false success when writing git identity fails" {
   if [ "$(id -u)" = "0" ]; then
     skip "chmod-based permission test doesn't work as root"
