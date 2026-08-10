@@ -32,6 +32,7 @@ macup --dotfiles-repo=<url> dotfiles
 macup --brewfile=<path> homebrew
 macup --brewfile-repo=<url> homebrew
 macup --brewfile-only homebrew    # run only the extra Brewfile, skip the bundled one
+macup --skip-git-identity dotfiles # skip the git user.name/user.email prompt
 macup --dry-run --all          # preview every module's intended actions, no changes made
 macup --help
 macup --version
@@ -74,7 +75,10 @@ a per-invocation flag, not a persisted config setting.
 (via `git config -f`, never symlinked) for `git config user.name`/
 `user.email`. It prompts once, the first time either is unset, and
 reuses whatever's already there on later runs. This is separate from —
-and never overwrites — the bundled `dotfiles/gitconfig`.
+and never overwrites — the bundled `dotfiles/gitconfig`. Leaving either
+prompt blank skips writing the identity; passing `--skip-git-identity`
+skips the prompt outright, which is also what happens automatically
+(with a warning) on non-interactive runs with no identity configured.
 
 `macup github` requires a GitHub Personal Access Token (classic) with
 the `repo`, `read:org`, `gist`, and `admin:public_key` scopes, created

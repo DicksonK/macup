@@ -100,12 +100,22 @@ run_dotfiles() {
 
     if [ -n "$cur_name" ] && [ -n "$cur_email" ]; then
       log_info "Git identity already configured in $identity_file, skipping"
+    elif [ "${MACUP_SKIP_GIT_IDENTITY:-0}" = "1" ]; then
+      log_info "Skipping git identity setup (--skip-git-identity)"
     elif is_dry_run; then
-      dry_run_report "prompt for and write git identity to $identity_file"
+      if [ "${MACUP_NONINTERACTIVE:-0}" = "1" ]; then
+        dry_run_report "skip git identity setup (non-interactive, no identity configured)"
+      else
+        dry_run_report "prompt for and write git identity to $identity_file"
+      fi
+    elif [ "${MACUP_NONINTERACTIVE:-0}" = "1" ]; then
+      log_warn "Skipping git identity setup: no identity configured and running non-interactively (pass --skip-git-identity to silence this, or configure $identity_file directly)"
     else
-      [ -n "$cur_name" ] || cur_name="$(ui_input "Git user.name" "")"
-      [ -n "$cur_email" ] || cur_email="$(ui_input "Git user.email" "")"
-      if git config -f "$identity_file" user.name "$cur_name" \
+      [ -n "$cur_name" ] || cur_name="$(ui_input "Git user.name (leave blank to skip)" "")"
+      [ -n "$cur_email" ] || cur_email="$(ui_input "Git user.email (leave blank to skip)" "")"
+      if [ -z "$cur_name" ] || [ -z "$cur_email" ]; then
+        log_info "Skipped git identity setup"
+      elif git config -f "$identity_file" user.name "$cur_name" \
         && git config -f "$identity_file" user.email "$cur_email"; then
         log_info "Wrote git identity to $identity_file"
       else

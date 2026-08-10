@@ -54,6 +54,13 @@ teardown() {
   [[ "$output" == *"Usage: macup"* ]]
 }
 
+@test "macup --help documents --skip-git-identity" {
+  run "$MACUP_BIN" --help
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"--skip-git-identity"* ]]
+}
+
 @test "macup rejects an unknown argument" {
   run "$MACUP_BIN" --bogus
 
@@ -75,6 +82,14 @@ teardown() {
 
   [ "$status" -eq 0 ]
   grep -q "clone git@github.com:example/dotfiles.git $HOME/.cache/macup/dotfiles-repo" "$MACUP_CALL_LOG"
+}
+
+@test "macup --skip-git-identity skips the git identity prompt" {
+  run "$MACUP_BIN" --skip-git-identity dotfiles
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Skipping git identity setup (--skip-git-identity)"* ]]
+  [ ! -f "$HOME/.gitconfig.local" ]
 }
 
 @test "macup -d overrides DOTFILES_REPO for this run only" {
