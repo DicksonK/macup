@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/DicksonK/macup/compare/v0.5.0...v0.5.1) (2026-08-10)
+
+
+### Bug Fixes
+
+* don't warn "No dotfiles found" when every target is already linked ([6927573](https://github.com/DicksonK/macup/commit/6927573abe5347f1dab094a6c25485184a31bbcf))
+
 ## [0.5.0](https://github.com/DicksonK/macup/compare/v0.4.0...v0.5.0) (2026-08-09)
 
 
