@@ -41,6 +41,7 @@ Options:
   -b, --brewfile=<path>         Override EXTRA_BREWFILE for this run
   -br, --brewfile-repo=<url>    Override EXTRA_BREWFILE_REPO for this run
   -bo, --brewfile-only          Skip the bundled Brewfile, run only the extra one
+  --skip-git-identity           Skip prompting for/writing git user.name and user.email
   -v, --version                 Print the installed version and exit
   -h, --help                    Show this help
 
@@ -98,6 +99,7 @@ main() {
   local run_all=false
   local dry_run=false
   local brewfile_only=false
+  local skip_git_identity=false
   local cli_dotfiles_repo="" cli_brewfile="" cli_brewfile_repo=""
   local -a modules=()
 
@@ -162,6 +164,10 @@ main() {
         brewfile_only=true
         shift
         ;;
+      --skip-git-identity)
+        skip_git_identity=true
+        shift
+        ;;
       homebrew|shell|dotfiles|macos-defaults|github)
         modules+=("$1")
         shift
@@ -197,6 +203,13 @@ main() {
     MACUP_BREWFILE_ONLY=0
   fi
   export MACUP_BREWFILE_ONLY
+
+  if [ "$skip_git_identity" = true ]; then
+    MACUP_SKIP_GIT_IDENTITY=1
+  else
+    MACUP_SKIP_GIT_IDENTITY=0
+  fi
+  export MACUP_SKIP_GIT_IDENTITY
 
   if is_dry_run; then
     log_info "Dry run: no changes will be made"
