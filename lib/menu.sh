@@ -19,7 +19,7 @@ ui_banner() {
 
 ui_choose_modules() {
   gum choose --no-limit \
-    --header "Select modules (space to toggle, enter to confirm):" \
+    --header "Select modules (space to toggle, a to toggle all, enter to confirm, esc to cancel):" \
     --header.foreground 212 \
     --cursor.foreground 212 \
     --selected.foreground 212 \
@@ -38,12 +38,12 @@ ui_confirm() {
 ui_input() {
   local prompt="$1"
   local default="${2:-}"
-  gum input --placeholder "$prompt" --value "$default"
+  gum input --header "$prompt" --value "$default"
 }
 
 ui_input_secret() {
   local prompt="$1"
-  gum input --placeholder "$prompt" --password
+  gum input --header "$prompt" --password
 }
 
 ui_spin() {

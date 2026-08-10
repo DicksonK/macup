@@ -160,10 +160,11 @@ run_homebrew() {
         return 1
       fi
     fi
-  fi
-
-  if [ "${MACUP_BREWFILE_ONLY:-0}" = "1" ] && [ -z "${EXTRA_BREWFILE:-}" ] && [ -z "${EXTRA_BREWFILE_REPO:-}" ]; then
-    log_warn "--brewfile-only set but no extra Brewfile configured (EXTRA_BREWFILE/EXTRA_BREWFILE_REPO); nothing to bundle"
+  else
+    log_info "Skipping bundled Brewfile (--brewfile-only)"
+    if [ -z "${EXTRA_BREWFILE:-}" ] && [ -z "${EXTRA_BREWFILE_REPO:-}" ]; then
+      log_warn "--brewfile-only set but no extra Brewfile configured (EXTRA_BREWFILE/EXTRA_BREWFILE_REPO) — nothing will be installed"
+    fi
   fi
 
   if [ -n "${EXTRA_BREWFILE:-}" ]; then

@@ -173,8 +173,7 @@ main() {
         shift
         ;;
       *)
-        log_error "Unknown argument: $1"
-        usage
+        log_error "Unknown argument: $1 (run 'macup --help' for usage)"
         exit 1
         ;;
     esac
