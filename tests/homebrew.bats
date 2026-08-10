@@ -105,7 +105,6 @@ EOF
   run run_homebrew
 
   [ "$status" -eq 0 ]
-  grep -q "trust --tap databricks/tap" "$MACUP_CALL_LOG"
   grep -q "trust --tap homebrew/autoupdate" "$MACUP_CALL_LOG"
   grep -q "trust --tap martido/homebrew-graph" "$MACUP_CALL_LOG"
   grep -q "bundle --file=$ROOT_DIR/Brewfile" "$MACUP_CALL_LOG"
@@ -115,7 +114,7 @@ EOF
   install_stub_brew
   mkdir -p "$HOME/.homebrew"
   cat > "$HOME/.homebrew/trust.json" <<'EOF'
-{"trustedtaps": ["databricks/tap", "homebrew/autoupdate", "martido/homebrew-graph"]}
+{"trustedtaps": ["homebrew/autoupdate", "martido/homebrew-graph"]}
 EOF
 
   run run_homebrew
@@ -143,7 +142,7 @@ EOF
   run run_homebrew
 
   [ "$status" -eq 0 ]
-  [[ "$output" == *"[dry-run] would trust Homebrew tap(s): databricks/tap homebrew/autoupdate martido/homebrew-graph"* ]]
+  [[ "$output" == *"[dry-run] would trust Homebrew tap(s): homebrew/autoupdate martido/homebrew-graph"* ]]
   ! grep -q "gum confirm" "$MACUP_CALL_LOG"
   ! grep -q "trust --tap" "$MACUP_CALL_LOG"
 }
