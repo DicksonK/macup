@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/DicksonK/macup/compare/v0.6.0...v0.6.1) (2026-08-10)
+
+
+### Bug Fixes
+
+* improve CLI UX polish (input labels, checklist hints, error/warning clarity) ([6b096b1](https://github.com/DicksonK/macup/commit/6b096b1632f6cebaf232b99be824215372724f53))
+
 ## [0.6.0](https://github.com/DicksonK/macup/compare/v0.5.1...v0.6.0) (2026-08-10)
 
 
