@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.6.0](https://github.com/DicksonK/macup/compare/v0.5.1...v0.6.0) (2026-08-10)
+
+
+### Features
+
+* add --skip-git-identity CLI flag ([1e01c10](https://github.com/DicksonK/macup/commit/1e01c10ceec193e9e53cf8b1c4ad3f3992341d73))
+* allow skipping git identity setup via env var and blank input ([7e4387c](https://github.com/DicksonK/macup/commit/7e4387c08535de7dabe8bd04cfe196d5a75eadeb))
+
+
+### Bug Fixes
+
+* make dry-run report the real non-interactive skip; document --skip-git-identity ([98c8502](https://github.com/DicksonK/macup/commit/98c8502cfc9b0969ddbe53b664a0181b085ac131))
+
 ## [0.5.1](https://github.com/DicksonK/macup/compare/v0.5.0...v0.5.1) (2026-08-10)
 
 
